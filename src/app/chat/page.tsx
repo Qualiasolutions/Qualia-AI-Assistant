@@ -9,12 +9,13 @@ import VoiceChat from '@/components/chat/VoiceChat';
 import Sidebar from '@/components/ui/Sidebar';
 import DataSidebar from '@/components/ui/DataSidebar';
 import InfoSidebar from '@/components/ui/InfoSidebar';
+import SearchBar from '@/components/search/SearchBar';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
 import useLeads from '@/hooks/useLeads';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiPlus, FiX, FiRefreshCw, FiGlobe } from 'react-icons/fi';
 import { Message } from '@/types';
 
 export default function ChatPage() {
@@ -23,6 +24,7 @@ export default function ChatPage() {
   const { settings, setLanguage, toggleVoice } = useSettings();
   const { extractLeadsFromMessage, createLead } = useLeads();
   const [showInfo, setShowInfo] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessagesRef = useRef<Set<string>>(new Set());
 
@@ -111,6 +113,8 @@ export default function ChatPage() {
   const handleNewChat = () => {
     stopSpeaking();
     resetThread();
+    setShowInfo(false);
+    setShowSearch(false);
   };
   
   const handleVoiceResult = (text: string) => {
@@ -123,6 +127,18 @@ export default function ChatPage() {
   const handleForceReset = () => {
     stopSpeaking();
     forceReset();
+  };
+
+  // Handle web search results
+  const handleSearchComplete = (searchText: string, searchResults: string) => {
+    // Format the search context for the assistant
+    const searchContext = `Web search results for "${searchText}":\n\n${searchResults}\n\nBased on these search results, `;
+    
+    // Send the search results as a user message
+    sendMessage(`${searchContext}please provide an answer about "${searchText}".`);
+    
+    // Hide search after submission
+    setShowSearch(false);
   };
 
   return (
@@ -143,63 +159,75 @@ export default function ChatPage() {
 
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col max-w-full">
-          <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            <div className="sticky top-0 z-10 mb-4 flex justify-center space-x-2">
-              <motion.button
-                onClick={handleNewChat}
-                className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center space-x-1"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <FiPlus className="mr-1" />
-                <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
-              </motion.button>
-
-              {isLoading && (
-                <motion.button
-                  onClick={handleForceReset}
-                  className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  title="Reset if stuck"
-                >
-                  <FiRefreshCw className="mr-1" />
-                  <span>{settings.language === 'el' ? 'Επαναφορά' : 'Reset'}</span>
-                </motion.button>
+          <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8">
+            <div className="max-w-4xl mx-auto">
+              {/* Show search bar if search is enabled */}
+              {showSearch && (
+                <div className="mb-6">
+                  <SearchBar onSearchComplete={handleSearchComplete} />
+                </div>
               )}
+              
+              {/* Message list */}
+              <div className="space-y-6">
+                <div className="sticky top-0 z-10 mb-4 flex justify-center space-x-2">
+                  <motion.button
+                    onClick={handleNewChat}
+                    className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center space-x-1"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FiPlus className="mr-1" />
+                    <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
+                  </motion.button>
+
+                  {isLoading && (
+                    <motion.button
+                      onClick={handleForceReset}
+                      className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center"
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      title="Reset if stuck"
+                    >
+                      <FiRefreshCw className="mr-1" />
+                      <span>{settings.language === 'el' ? 'Επαναφορά' : 'Reset'}</span>
+                    </motion.button>
+                  )}
+                </div>
+                
+                <AnimatePresence mode="popLayout">
+                  {messages.map((message) => (
+                    <motion.div
+                      key={message.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.2 }}
+                    >
+                      <ChatMessage 
+                        message={message} 
+                        voiceEnabled={settings.voice.enabled}
+                        voiceOptions={settings.voice}
+                      />
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+
+                {isLoading && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex items-center space-x-2 p-4 text-gray-500"
+                  >
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                  </motion.div>
+                )}
+
+                <div ref={messagesEndRef} />
+              </div>
             </div>
-            
-            <AnimatePresence mode="popLayout">
-              {messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <ChatMessage 
-                    message={message} 
-                    voiceEnabled={settings.voice.enabled}
-                    voiceOptions={settings.voice}
-                  />
-                </motion.div>
-              ))}
-            </AnimatePresence>
-
-            {isLoading && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                className="flex items-center space-x-2 p-4 text-gray-500"
-              >
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-              </motion.div>
-            )}
-
-            <div ref={messagesEndRef} />
           </div>
 
           {/* Voice Chat UI */}
@@ -214,11 +242,19 @@ export default function ChatPage() {
 
           {/* Chat Input */}
           <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-            <ChatInput 
-              onSendMessage={sendMessage} 
-              isLoading={isLoading}
-              language={settings.language}
-            />
+            <div className="relative">
+              <ChatInput
+                onSendMessage={sendMessage}
+                isLoading={isLoading}
+                language={settings.language}
+              />
+              <VoiceChat
+                voiceOptions={settings.voice}
+                language={settings.language}
+                onSpeechResult={handleVoiceResult}
+                isProcessing={isLoading}
+              />
+            </div>
           </div>
         </div>
 
@@ -273,6 +309,46 @@ export default function ChatPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <div className="sticky bottom-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex space-x-2 mb-2">
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleNewChat}
+              className="flex items-center justify-center h-8 px-3 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
+            >
+              <FiPlus className="mr-1" size={14} />
+              New Chat
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => setShowSearch(!showSearch)}
+              className={`flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md transition-colors ${
+                showSearch 
+                  ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/50'
+                  : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
+              }`}
+            >
+              <FiGlobe className="mr-1" size={14} />
+              {showSearch ? 'Hide Search' : 'Web Search'}
+            </motion.button>
+            
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.98 }}
+              onClick={handleForceReset}
+              className="flex items-center justify-center h-8 px-3 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/50 rounded-md transition-colors"
+            >
+              <FiRefreshCw className="mr-1" size={14} />
+              Reset
+            </motion.button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 } 
