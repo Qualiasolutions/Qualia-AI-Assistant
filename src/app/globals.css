@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary: #145199;
+  --primary-light: #2a6cb3;
+  --primary-dark: #0e3b70;
+  --background: #ffffff;
+  --foreground: #171717;
+  --card: #f9f9f9;
+  --card-foreground: #171717;
+  --border: #e5e5e5;
+  --input: #e5e5e5;
+  --ring: #145199;
+}
+
+.dark {
+  --primary: #145199;
+  --primary-light: #2a6cb3;
+  --primary-dark: #0e3b70;
+  --background: #0f172a;
+  --foreground: #f8fafc;
+  --card: #1e293b;
+  --card-foreground: #f8fafc;
+  --border: #334155;
+  --input: #334155;
+  --ring: #145199;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-[#145199] hover:bg-[#0e3b70] text-white font-medium py-2 px-4 rounded transition-colors;
+  }
+  
+  .btn-secondary {
+    @apply bg-white hover:bg-gray-100 text-[#145199] border border-[#145199] font-medium py-2 px-4 rounded transition-colors;
+  }
+  
+  .input-field {
+    @apply border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#145199];
+  }
+  
+  .card {
+    @apply bg-card rounded-lg shadow-md p-4;
+  }
+  
+  .message-bubble {
+    @apply rounded-lg p-3 max-w-[80%];
+  }
+  
+  .user-message {
+    @apply message-bubble bg-[#145199] text-white ml-auto;
+  }
+  
+  .assistant-message {
+    @apply message-bubble bg-card text-card-foreground mr-auto;
+  }
+}
