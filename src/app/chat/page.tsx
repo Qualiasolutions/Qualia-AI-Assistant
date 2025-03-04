@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatMessage from '@/components/chat/ChatMessage';
-import { Message } from '@/types';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
 import { stopSpeaking } from '@/lib/voice';
@@ -14,7 +13,7 @@ import { motion } from 'framer-motion';
 export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, error, sendMessage, resetThread } = useChat();
-  const { settings, setTheme, setLanguage, toggleVoice } = useSettings();
+  const { settings, setLanguage, toggleVoice } = useSettings();
   const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

@@ -60,4 +60,21 @@ export type AssistantPurpose =
   | 'lead_generation'
   | 'invoice_creation'
   | 'product_info'
-  | 'general_query'; 
+  | 'general_query';
+
+export interface Lead {
+  id: string;
+  companyName: string;
+  industry: string;
+  location: string;
+  contactPerson?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  notes?: string;
+  source: string;
+  createdAt: Date;
+  updatedAt: Date;
+  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
+  assignedTo?: string;
+} 
