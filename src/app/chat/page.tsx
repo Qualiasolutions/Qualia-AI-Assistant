@@ -13,12 +13,12 @@ import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX, FiInfo } from 'react-icons/fi';
+import { FiPlus, FiX } from 'react-icons/fi';
 import { Message } from '@/types';
 
 export default function ChatPage() {
   const router = useRouter();
-  const { messages, isLoading, error, sendMessage, resetThread, setMessages } = useChat();
+  const { messages, isLoading, sendMessage, resetThread, setMessages } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
   const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
