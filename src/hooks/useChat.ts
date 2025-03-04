@@ -17,6 +17,23 @@ const apiClient = {
     return data.threadId;
   },
 
+  async resetThread(welcomeMessage?: string): Promise<string> {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ 
+        action: 'resetThread',
+        message: welcomeMessage
+      }),
+    });
+
+    if (!response.ok) throw new Error('Failed to reset thread');
+    const data = await response.json();
+    return data.threadId;
+  },
+
   async sendMessage(threadId: string, message: string): Promise<string> {
     const response = await fetch('/api/assistant', {
       method: 'POST',
@@ -122,11 +139,24 @@ export default function useChat() {
       // Store intervalId so we can clear it in case of component unmount
       let pollIntervalId: NodeJS.Timeout;
       
+      // Add timeout handling
+      const MAX_POLLING_TIME = 30000; // 30 seconds max wait time
+      const startTime = Date.now();
+      
       // Create a promise that will resolve when polling is complete
       const pollingPromise = new Promise<void>((resolve, reject) => {
         // Poll for completion
         pollIntervalId = setInterval(async () => {
           try {
+            // Check if we've exceeded maximum polling time
+            if (Date.now() - startTime > MAX_POLLING_TIME) {
+              clearInterval(pollIntervalId);
+              setError('Request timed out. Please try again.');
+              setIsLoading(false);
+              reject(new Error('Polling timeout exceeded'));
+              return;
+            }
+            
             const status = await apiClient.getRunStatus(threadId, runId);
             
             if (status === 'completed') {
@@ -168,15 +198,54 @@ export default function useChat() {
   // Reset thread
   const resetThread = useCallback(async () => {
     try {
+      setIsLoading(true);
       // Create a new thread
       const newThreadId = await apiClient.createThread();
       setThreadId(newThreadId);
       localStorage.setItem('threadId', newThreadId);
       setMessages([]);
       setError(null);
+      setIsLoading(false);
     } catch (err) {
       setError('Failed to reset chat. Please try again.');
       console.error('Error resetting thread:', err);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Force reset with a welcome message if stuck
+  const forceReset = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      // Create a completely new thread and add a welcome message
+      const welcomeMessage = 'Welcome to Tzironis Business Suite! How can I assist you today?';
+      const newThreadId = await apiClient.resetThread(welcomeMessage);
+      setThreadId(newThreadId);
+      localStorage.setItem('threadId', newThreadId);
+      
+      // Wait a moment for the welcome message to be processed
+      setTimeout(async () => {
+        // Get the welcome message
+        try {
+          const initialMessages = await apiClient.getMessages(newThreadId);
+          setMessages(initialMessages);
+        } catch (e) {
+          console.error('Error getting initial messages:', e);
+          setMessages([{
+            id: `welcome-${Date.now()}`,
+            role: 'assistant',
+            content: welcomeMessage,
+            timestamp: new Date()
+          }]);
+        } finally {
+          setIsLoading(false);
+          setError(null);
+        }
+      }, 2000);
+    } catch (err) {
+      setError('Failed to reset chat. Please refresh the page.');
+      console.error('Error force resetting thread:', err);
+      setIsLoading(false);
     }
   }, []);
 
@@ -186,6 +255,7 @@ export default function useChat() {
     error,
     sendMessage,
     resetThread,
+    forceReset,
     setMessages
   };
 } 

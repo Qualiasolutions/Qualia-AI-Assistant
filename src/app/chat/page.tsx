@@ -13,12 +13,12 @@ import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX } from 'react-icons/fi';
+import { FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
 import { Message } from '@/types';
 
 export default function ChatPage() {
   const router = useRouter();
-  const { messages, isLoading, sendMessage, resetThread, setMessages } = useChat();
+  const { messages, isLoading, sendMessage, resetThread, setMessages, forceReset } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
   const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -83,6 +83,12 @@ export default function ChatPage() {
     }
   };
 
+  // Add a recovery function for stuck states
+  const handleForceReset = () => {
+    stopSpeaking();
+    forceReset();
+  };
+
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <Header
@@ -102,7 +108,7 @@ export default function ChatPage() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col max-w-full">
           <div className="flex-1 overflow-y-auto p-4 md:p-6">
-            <div className="sticky top-0 z-10 mb-4 flex justify-center">
+            <div className="sticky top-0 z-10 mb-4 flex justify-center space-x-2">
               <motion.button
                 onClick={handleNewChat}
                 className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center space-x-1"
@@ -112,6 +118,19 @@ export default function ChatPage() {
                 <FiPlus className="mr-1" />
                 <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
               </motion.button>
+
+              {isLoading && (
+                <motion.button
+                  onClick={handleForceReset}
+                  className="px-4 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Reset if stuck"
+                >
+                  <FiRefreshCw className="mr-1" />
+                  <span>{settings.language === 'el' ? 'Επαναφορά' : 'Reset'}</span>
+                </motion.button>
+              )}
             </div>
             
             <AnimatePresence mode="popLayout">

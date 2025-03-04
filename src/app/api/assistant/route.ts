@@ -17,6 +17,23 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ threadId: newThreadId });
       }
       
+      case 'resetThread': {
+        // Create a new thread regardless of the old one
+        // This is used to recover from stuck states
+        const newThreadId = await createThread();
+        
+        // If there's a welcome message, add it to the thread
+        if (message) {
+          await addMessageToThread(newThreadId, message);
+          await runAssistant(newThreadId);
+        }
+        
+        return NextResponse.json({ 
+          threadId: newThreadId,
+          status: 'reset_successful' 
+        });
+      }
+      
       case 'sendMessage': {
         if (!threadId || !message) {
           return NextResponse.json(
