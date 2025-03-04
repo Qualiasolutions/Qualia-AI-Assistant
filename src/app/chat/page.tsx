@@ -181,6 +181,16 @@ export default function ChatPage() {
                     <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
                   </motion.button>
 
+                  <motion.button
+                    onClick={() => setShowSearch(!showSearch)}
+                    className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center"
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                  >
+                    <FiGlobe className="mr-1" />
+                    <span>{settings.language === 'el' ? 'Αναζήτηση' : 'Search'}</span>
+                  </motion.button>
+
                   {isLoading && (
                     <motion.button
                       onClick={handleForceReset}
@@ -230,14 +240,24 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Voice Chat UI */}
-          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-2">
-            <VoiceChat
-              voiceOptions={settings.voice}
-              language={settings.language}
-              onSpeechResult={handleVoiceResult}
-              isProcessing={isLoading}
-            />
+          {/* Input area with chat input and voice chat */}
+          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+            <div className="max-w-4xl mx-auto relative">
+              <ChatInput
+                onSendMessage={(text) => sendMessage(text)}
+                isLoading={isLoading}
+                language={settings.language || 'en'}
+              />
+              
+              <div className="mt-2">
+                <VoiceChat
+                  voiceOptions={settings.voice}
+                  language={settings.language || 'en'}
+                  onSpeechResult={handleVoiceResult}
+                  isProcessing={isLoading}
+                />
+              </div>
+            </div>
           </div>
         </div>
 
@@ -261,90 +281,31 @@ export default function ChatPage() {
               initial={{ scale: 0.9 }}
               animate={{ scale: 1 }}
               exit={{ scale: 0.9 }}
-              className="bg-white dark:bg-gray-800 p-6 rounded-lg max-w-lg w-full"
+              className="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 max-w-lg w-full"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-bold">About Qualia AI Assistant</h2>
-                <button
-                  onClick={() => setShowInfo(false)}
-                  className="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
-                >
-                  <FiX className="text-xl" />
+                <h2 className="text-xl font-bold">{settings.language === 'el' ? 'Πληροφορίες' : 'Information'}</h2>
+                <button onClick={() => setShowInfo(false)} className="text-gray-500 hover:text-gray-700">
+                  <FiX size={24} />
                 </button>
               </div>
-              <div className="prose dark:prose-invert">
+              <div className="prose dark:prose-invert max-w-none">
                 <p>
-                  Qualia AI is an intelligent assistant designed specifically for Tzironis business
-                  operations. It can help with:
+                  {settings.language === 'el'
+                    ? 'Ο βοηθός τεχνητής νοημοσύνης Qualia για το Tzironis Business Suite είναι σχεδιασμένος να σας βοηθήσει με εργασίες όπως διαχείριση πελατών, δημιουργία τιμολογίων και απάντηση σε ερωτήσεις σχετικά με την επιχείρησή σας.'
+                    : 'The Qualia AI assistant for Tzironis Business Suite is designed to help you with tasks like customer management, invoice creation, and answering questions about your business.'}
                 </p>
-                <ul>
-                  <li>Answering questions about products and inventory</li>
-                  <li>Generating sales leads</li>
-                  <li>Creating invoices</li>
-                  <li>Providing business insights</li>
-                </ul>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-4">
-                  Version 1.0.0 | Powered by Mistral AI
+                <p>
+                  {settings.language === 'el'
+                    ? 'Χρησιμοποιεί προηγμένη τεχνολογία επεξεργασίας φυσικής γλώσσας για να κατανοήσει τις ερωτήσεις σας και να παρέχει χρήσιμες απαντήσεις.'
+                    : 'It uses advanced natural language processing technology to understand your questions and provide helpful answers.'}
                 </p>
               </div>
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
-
-      <div className="sticky bottom-0 w-full bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex space-x-2 mb-2">
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleNewChat}
-              className="flex items-center justify-center h-8 px-3 text-xs font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-md transition-colors"
-            >
-              <FiPlus className="mr-1" size={14} />
-              New Chat
-            </motion.button>
-            
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => setShowSearch(!showSearch)}
-              className={`flex items-center justify-center h-8 px-3 text-xs font-medium rounded-md transition-colors ${
-                showSearch 
-                  ? 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30 hover:bg-blue-200 dark:hover:bg-blue-800/50'
-                  : 'text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600'
-              }`}
-            >
-              <FiGlobe className="mr-1" size={14} />
-              {showSearch ? 'Hide Search' : 'Web Search'}
-            </motion.button>
-            
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={handleForceReset}
-              className="flex items-center justify-center h-8 px-3 text-xs font-medium text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30 hover:bg-red-200 dark:hover:bg-red-800/50 rounded-md transition-colors"
-            >
-              <FiRefreshCw className="mr-1" size={14} />
-              Reset
-            </motion.button>
-          </div>
-          
-          <div className="relative">
-            <ChatInput
-              onSendMessage={(text) => sendMessage(text)}
-              isLoading={isLoading}
-              language={settings.language || 'en'}
-            />
-            <VoiceChat
-              settings={settings}
-              onResult={handleVoiceResult}
-              disabled={isLoading}
-            />
-          </div>
-        </div>
-      </div>
     </div>
   );
 } 
