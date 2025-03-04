@@ -13,7 +13,7 @@ const loadLeadsFromStorage = (): Lead[] => {
       if (storedLeads) {
         // Parse dates back to Date objects
         const parsed = JSON.parse(storedLeads);
-        return parsed.map((lead: any) => ({
+        return parsed.map((lead: Omit<Lead, 'createdAt' | 'updatedAt'> & { createdAt: string; updatedAt: string }) => ({
           ...lead,
           createdAt: new Date(lead.createdAt),
           updatedAt: new Date(lead.updatedAt)

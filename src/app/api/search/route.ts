@@ -7,6 +7,14 @@ interface SearchResult {
   snippet: string;
 }
 
+// Google search API response item structure
+interface GoogleSearchItem {
+  title: string;
+  link: string;
+  snippet?: string;
+  [key: string]: any; // Allow other properties without strict typing
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { query } = await request.json();
@@ -40,7 +48,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Extract and format search results
-    const results: SearchResult[] = data.items?.map((item: any) => ({
+    const results: SearchResult[] = data.items?.map((item: GoogleSearchItem) => ({
       title: item.title,
       link: item.link,
       snippet: item.snippet || ''

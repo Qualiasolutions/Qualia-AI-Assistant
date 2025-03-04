@@ -58,7 +58,7 @@ export default function SearchResults({
           </div>
         ) : results.length === 0 ? (
           <div className="text-center py-6 text-gray-500">
-            <p>No results found for "{query}"</p>
+            <p>No results found for &quot;{query}&quot;</p>
             <p className="text-sm mt-2">Please try different search terms.</p>
           </div>
         ) : (

@@ -6,34 +6,6 @@ export default function useLeads() {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // First try to load leads from localStorage directly for better UX
-  useEffect(() => {
-    const loadLeadsFromLocalStorage = () => {
-      try {
-        const storedLeads = localStorage.getItem('tzironis_leads');
-        if (storedLeads) {
-          const parsed = JSON.parse(storedLeads);
-          const parsedLeads = parsed.map((lead: any) => ({
-            ...lead,
-            createdAt: new Date(lead.createdAt),
-            updatedAt: new Date(lead.updatedAt)
-          }));
-          setLeads(parsedLeads);
-          setIsLoading(false);
-        } else {
-          // If no leads in local storage, fetch from API
-          fetchLeads();
-        }
-      } catch (error) {
-        console.error('Error loading leads from localStorage:', error);
-        // Fall back to API
-        fetchLeads();
-      }
-    };
-
-    loadLeadsFromLocalStorage();
-  }, []);
-
   // Fetch all leads from the API
   const fetchLeads = useCallback(async () => {
     try {
@@ -54,6 +26,37 @@ export default function useLeads() {
       setIsLoading(false);
     }
   }, []);
+
+  // First try to load leads from localStorage directly for better UX
+  useEffect(() => {
+    const loadLeadsFromLocalStorage = () => {
+      try {
+        const storedLeads = localStorage.getItem('tzironis_leads');
+        if (storedLeads) {
+          const parsed = JSON.parse(storedLeads);
+          const parsedLeads = parsed.map((lead: Omit<Lead, 'createdAt' | 'updatedAt'> & { 
+            createdAt: string; 
+            updatedAt: string 
+          }) => ({
+            ...lead,
+            createdAt: new Date(lead.createdAt),
+            updatedAt: new Date(lead.updatedAt)
+          }));
+          setLeads(parsedLeads);
+          setIsLoading(false);
+        } else {
+          // If no leads in local storage, fetch from API
+          fetchLeads();
+        }
+      } catch (error) {
+        console.error('Error loading leads from localStorage:', error);
+        // Fall back to API
+        fetchLeads();
+      }
+    };
+
+    loadLeadsFromLocalStorage();
+  }, [fetchLeads]);
 
   // Create a new lead
   const createLead = useCallback(async (leadData: Partial<Lead>) => {

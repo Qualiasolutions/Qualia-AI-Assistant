@@ -3,6 +3,12 @@ import { FiSearch, FiX } from 'react-icons/fi';
 import useSearch from '@/hooks/useSearch';
 import SearchResults from './SearchResults';
 
+interface SearchResult {
+  title: string;
+  link: string;
+  snippet: string;
+}
+
 interface SearchBarProps {
   onSearchComplete?: (searchText: string, searchResults: string) => void;
 }
@@ -26,7 +32,7 @@ export default function SearchBar({ onSearchComplete }: SearchBarProps) {
     }
   };
 
-  const formatSearchResults = (results: any[]): string => {
+  const formatSearchResults = (results: SearchResult[]): string => {
     return results.map((result, index) => {
       return `[${index + 1}] ${result.title}\n${result.snippet}\nSource: ${result.link}\n`;
     }).join('\n');
@@ -41,7 +47,7 @@ export default function SearchBar({ onSearchComplete }: SearchBarProps) {
     }
   };
 
-  const handleInsert = (result: any) => {
+  const handleInsert = (result: SearchResult) => {
     if (onSearchComplete) {
       const formattedResult = `${result.title}\n${result.snippet}\nSource: ${result.link}`;
       onSearchComplete(query, formattedResult);
