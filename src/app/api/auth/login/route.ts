@@ -3,20 +3,20 @@ import { authenticate } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username, password } = await request.json();
+    const { username } = await request.json();
 
-    if (!username || !password) {
+    if (!username) {
       return NextResponse.json(
-        { message: 'Username and password are required' },
+        { message: 'Username is required' },
         { status: 400 }
       );
     }
 
-    const user = authenticate(username, password);
+    const user = authenticate(username);
 
     if (!user) {
       return NextResponse.json(
-        { message: 'Invalid username or password' },
+        { message: 'Invalid username' },
         { status: 401 }
       );
     }

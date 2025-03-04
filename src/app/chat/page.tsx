@@ -333,8 +333,9 @@ export default function ChatPage() {
           
           <div className="relative">
             <ChatInput
-              onSubmit={(text) => sendMessage(text)}
-              disabled={isLoading}
+              onSendMessage={(text) => sendMessage(text)}
+              isLoading={isLoading}
+              language={settings.language || 'en'}
             />
             <VoiceChat
               settings={settings}
