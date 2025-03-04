@@ -5,10 +5,12 @@ const apiKey = process.env.OPENAI_API_KEY;
 const assistantId = process.env.OPENAI_ASSISTANT_ID;
 
 if (!apiKey) {
+  console.error('OPENAI_API_KEY environment variable is not set. Please configure it in Vercel environment variables.');
   throw new Error('Missing OpenAI API key');
 }
 
 if (!assistantId) {
+  console.error('OPENAI_ASSISTANT_ID environment variable is not set. Please configure it in Vercel environment variables.');
   throw new Error('Missing OpenAI Assistant ID');
 }
 
