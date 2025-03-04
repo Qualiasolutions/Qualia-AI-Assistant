@@ -1,26 +1,33 @@
 import OpenAI from 'openai';
 import { Message } from '@/types';
 
-const apiKey = process.env.OPENAI_API_KEY;
-const assistantId = process.env.OPENAI_ASSISTANT_ID;
+// Create a function to initialize the OpenAI client
+// This should only be called on the server side
+const getOpenAIClient = () => {
+  const apiKey = process.env.OPENAI_API_KEY;
+  const assistantId = process.env.OPENAI_ASSISTANT_ID;
 
-if (!apiKey) {
-  console.error('OPENAI_API_KEY environment variable is not set. Please configure it in Vercel environment variables.');
-  throw new Error('Missing OpenAI API key');
-}
+  if (!apiKey) {
+    console.error('OPENAI_API_KEY environment variable is not set. Please configure it in environment variables.');
+    throw new Error('Missing OpenAI API key');
+  }
 
-if (!assistantId) {
-  console.error('OPENAI_ASSISTANT_ID environment variable is not set. Please configure it in Vercel environment variables.');
-  throw new Error('Missing OpenAI Assistant ID');
-}
+  if (!assistantId) {
+    console.error('OPENAI_ASSISTANT_ID environment variable is not set. Please configure it in environment variables.');
+    throw new Error('Missing OpenAI Assistant ID');
+  }
 
-const openai = new OpenAI({
-  apiKey,
-});
+  return {
+    client: new OpenAI({ apiKey }),
+    assistantId
+  };
+};
 
+// These functions will now be called via API routes, not directly from the client
 export async function createThread() {
   try {
-    const thread = await openai.beta.threads.create();
+    const { client } = getOpenAIClient();
+    const thread = await client.beta.threads.create();
     return thread.id;
   } catch (error) {
     console.error('Error creating thread:', error);
@@ -30,7 +37,8 @@ export async function createThread() {
 
 export async function addMessageToThread(threadId: string, content: string) {
   try {
-    await openai.beta.threads.messages.create(threadId, {
+    const { client } = getOpenAIClient();
+    await client.beta.threads.messages.create(threadId, {
       role: 'user',
       content,
     });
@@ -42,7 +50,8 @@ export async function addMessageToThread(threadId: string, content: string) {
 
 export async function runAssistant(threadId: string) {
   try {
-    const run = await openai.beta.threads.runs.create(threadId, {
+    const { client, assistantId } = getOpenAIClient();
+    const run = await client.beta.threads.runs.create(threadId, {
       assistant_id: assistantId as string,
     });
     return run.id;
@@ -54,7 +63,8 @@ export async function runAssistant(threadId: string) {
 
 export async function getRunStatus(threadId: string, runId: string) {
   try {
-    const run = await openai.beta.threads.runs.retrieve(threadId, runId);
+    const { client } = getOpenAIClient();
+    const run = await client.beta.threads.runs.retrieve(threadId, runId);
     return run.status;
   } catch (error) {
     console.error('Error getting run status:', error);
@@ -64,7 +74,8 @@ export async function getRunStatus(threadId: string, runId: string) {
 
 export async function getMessages(threadId: string): Promise<Message[]> {
   try {
-    const messages = await openai.beta.threads.messages.list(threadId);
+    const { client } = getOpenAIClient();
+    const messages = await client.beta.threads.messages.list(threadId);
     
     return messages.data.map((message) => ({
       id: message.id,
@@ -80,4 +91,4 @@ export async function getMessages(threadId: string): Promise<Message[]> {
   }
 }
 
-export default openai; 
+export default getOpenAIClient().client; 

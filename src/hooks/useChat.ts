@@ -1,12 +1,64 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Message } from '@/types';
-import { 
-  createThread, 
-  addMessageToThread, 
-  runAssistant, 
-  getRunStatus, 
-  getMessages 
-} from '@/lib/openai';
+
+// Client-side API calls
+const apiClient = {
+  async createThread(): Promise<string> {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'createThread' }),
+    });
+
+    if (!response.ok) throw new Error('Failed to create thread');
+    const data = await response.json();
+    return data.threadId;
+  },
+
+  async sendMessage(threadId: string, message: string): Promise<string> {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'sendMessage', threadId, message }),
+    });
+
+    if (!response.ok) throw new Error('Failed to send message');
+    const data = await response.json();
+    return data.runId;
+  },
+
+  async getRunStatus(threadId: string, runId: string): Promise<string> {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'getRunStatus', threadId, runId }),
+    });
+
+    if (!response.ok) throw new Error('Failed to get run status');
+    const data = await response.json();
+    return data.status;
+  },
+
+  async getMessages(threadId: string): Promise<Message[]> {
+    const response = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ action: 'getMessages', threadId }),
+    });
+
+    if (!response.ok) throw new Error('Failed to get messages');
+    const data = await response.json();
+    return data.messages;
+  },
+};
 
 export default function useChat() {
   const [threadId, setThreadId] = useState<string | null>(null);
@@ -24,11 +76,11 @@ export default function useChat() {
         if (storedThreadId) {
           setThreadId(storedThreadId);
           // Load messages from the existing thread
-          const existingMessages = await getMessages(storedThreadId);
+          const existingMessages = await apiClient.getMessages(storedThreadId);
           setMessages(existingMessages);
         } else {
           // Create a new thread
-          const newThreadId = await createThread();
+          const newThreadId = await apiClient.createThread();
           setThreadId(newThreadId);
           localStorage.setItem('threadId', newThreadId);
         }
@@ -59,21 +111,18 @@ export default function useChat() {
       
       setMessages((prev) => [...prev, userMessage]);
 
-      // Send message to OpenAI
-      await addMessageToThread(threadId, content);
-      
-      // Run the assistant
-      const runId = await runAssistant(threadId);
+      // Send message to API
+      const runId = await apiClient.sendMessage(threadId, content);
       
       // Poll for completion
       const pollInterval = setInterval(async () => {
-        const status = await getRunStatus(threadId, runId);
+        const status = await apiClient.getRunStatus(threadId, runId);
         
         if (status === 'completed') {
           clearInterval(pollInterval);
           
           // Get updated messages
-          const updatedMessages = await getMessages(threadId);
+          const updatedMessages = await apiClient.getMessages(threadId);
           setMessages(updatedMessages);
           setIsLoading(false);
         } else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
@@ -93,7 +142,7 @@ export default function useChat() {
   const resetThread = useCallback(async () => {
     try {
       // Create a new thread
-      const newThreadId = await createThread();
+      const newThreadId = await apiClient.createThread();
       setThreadId(newThreadId);
       localStorage.setItem('threadId', newThreadId);
       setMessages([]);
