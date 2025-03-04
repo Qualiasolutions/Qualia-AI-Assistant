@@ -52,7 +52,14 @@ export async function POST(request: NextRequest) {
         }
         
         const messages = await getMessages(threadId);
-        return NextResponse.json({ messages });
+        
+        // Format the messages for safe JSON serialization (Date objects can't be directly serialized)
+        const formattedMessages = messages.map(message => ({
+          ...message,
+          timestamp: message.timestamp instanceof Date ? message.timestamp.toISOString() : new Date().toISOString()
+        }));
+        
+        return NextResponse.json({ messages: formattedMessages });
       }
       
       default:

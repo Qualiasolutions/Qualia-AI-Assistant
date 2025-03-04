@@ -56,7 +56,12 @@ const apiClient = {
 
     if (!response.ok) throw new Error('Failed to get messages');
     const data = await response.json();
-    return data.messages;
+    
+    // Ensure timestamps are Date objects
+    return data.messages.map((message: any) => ({
+      ...message,
+      timestamp: message.timestamp ? new Date(message.timestamp) : new Date()
+    }));
   },
 };
 
