@@ -116,7 +116,17 @@ export async function speakWithEnhancedTTS(text: string, options: VoiceOptions):
     
     // Get audio data and play it
     const audioArrayBuffer = await response.arrayBuffer();
-    const audioContext = new ((window as any).AudioContext || (window as any).webkitAudioContext)();
+    
+    // Define window with WebKit audio context extension
+    interface ExtendedWindow extends Window {
+      AudioContext: typeof AudioContext;
+      webkitAudioContext?: typeof AudioContext;
+    }
+    
+    const extWindow = window as ExtendedWindow;
+    const AudioContextClass = extWindow.AudioContext || extWindow.webkitAudioContext;
+    const audioContext = new AudioContextClass();
+    
     const audioBuffer = await audioContext.decodeAudioData(audioArrayBuffer);
     
     const source = audioContext.createBufferSource();

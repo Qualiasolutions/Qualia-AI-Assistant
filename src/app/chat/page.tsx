@@ -16,7 +16,6 @@ export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, error, sendMessage, resetThread } = useChat();
   const { settings, setLanguage, toggleVoice, setVoiceOptions } = useSettings();
-  const [showSettings, setShowSettings] = useState(false);
   const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 

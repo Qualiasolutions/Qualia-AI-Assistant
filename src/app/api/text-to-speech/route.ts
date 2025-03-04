@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
     // For demonstration, we'll use a freely available TTS service
     // In production, you'd use Azure Speech Service with proper credentials
     
-    // Build SSML for more control over speech synthesis
-    const ssml = `
+    // Build SSML for more control over speech synthesis - commented out as not used currently
+    /* const ssml = `
       <speak version="1.0" xmlns="http://www.w3.org/2001/10/synthesis" xml:lang="en-US">
         <voice name="${voice || 'en-US-JennyNeural'}">
           <prosody rate="${rate || '1'}" pitch="${pitch || '1'}">
@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
           </prosody>
         </voice>
       </speak>
-    `;
+    `; */
     
     try {
       // For demo purposes, we'll use browser's built-in TTS instead of Azure

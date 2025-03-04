@@ -88,7 +88,7 @@ export default function useVoiceRecognition({
         }
       }
     };
-  }, []); // Empty dependency array = initialize once
+  }, [language, isListening]); // Dependencies that are used inside the effect
 
   // Update language when it changes
   useEffect(() => {

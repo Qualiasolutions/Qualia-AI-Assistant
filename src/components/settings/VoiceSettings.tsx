@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { VoiceOptions, AppSettings } from '@/types';
-import { speakText, getAvailableVoices, enhancedVoiceOptions, stopSpeaking } from '@/lib/voice';
+import { speakText, enhancedVoiceOptions, stopSpeaking } from '@/lib/voice';
 
 interface VoiceSettingsProps {
   settings: AppSettings;
@@ -60,7 +60,7 @@ export default function VoiceSettings({ settings, onUpdate }: VoiceSettingsProps
       ...settings,
       voice: voiceOptions
     });
-  }, [voiceOptions]);
+  }, [voiceOptions, onUpdate, settings]);
   
   const handleToggleVoice = () => {
     setVoiceOptions(prev => ({

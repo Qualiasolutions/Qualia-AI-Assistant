@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import VoiceSettings from '@/components/settings/VoiceSettings';
 import useSettings from '@/hooks/useSettings';
 import { FiArrowLeft, FiMoon, FiSun, FiMonitor } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import { AppSettings } from '@/types';
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function SettingsPage() {
     router.back();
   };
   
-  const handleVoiceSettingsUpdate = (newSettings: any) => {
+  const handleVoiceSettingsUpdate = (newSettings: AppSettings) => {
     setVoiceOptions(newSettings.voice);
   };
   

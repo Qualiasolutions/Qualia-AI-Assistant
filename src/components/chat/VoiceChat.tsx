@@ -19,10 +19,15 @@ export default function VoiceChat({
   onSpeechResult,
   isProcessing
 }: VoiceChatProps) {
-  const [isMuted, setIsMuted] = useState(false);
+  const [isMuted, setIsMuted] = useState(!voiceOptions.enabled);
   const [isActivated, setIsActivated] = useState(false);
   const lastTranscriptRef = useRef<string>('');
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Update mute state when voice options change
+  useEffect(() => {
+    setIsMuted(!voiceOptions.enabled);
+  }, [voiceOptions.enabled]);
   
   // Handle voice recognition
   const handleSpeechResult = useCallback((transcript: string) => {

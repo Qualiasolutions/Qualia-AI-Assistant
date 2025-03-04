@@ -58,7 +58,7 @@ const apiClient = {
     const data = await response.json();
     
     // Ensure timestamps are Date objects
-    return data.messages.map((message: any) => ({
+    return data.messages.map((message: { id: string; role: 'user' | 'assistant'; content: string; timestamp: string | number | Date }) => ({
       ...message,
       timestamp: message.timestamp ? new Date(message.timestamp) : new Date()
     }));
