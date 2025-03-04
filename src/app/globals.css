@@ -30,7 +30,7 @@
 
 @layer base {
   body {
-    @apply bg-background text-foreground;
+    @apply bg-white dark:bg-[#0f172a] text-[#171717] dark:text-[#f8fafc];
   }
 }
 
@@ -44,11 +44,11 @@
   }
   
   .input-field {
-    @apply border border-input rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#145199];
+    @apply border border-[#e5e5e5] dark:border-[#334155] rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#145199];
   }
   
   .card {
-    @apply bg-card rounded-lg shadow-md p-4;
+    @apply bg-[#f9f9f9] dark:bg-[#1e293b] rounded-lg shadow-md p-4;
   }
   
   .message-bubble {
@@ -60,6 +60,6 @@
   }
   
   .assistant-message {
-    @apply message-bubble bg-card text-card-foreground mr-auto;
+    @apply message-bubble bg-[#f9f9f9] dark:bg-[#1e293b] text-[#171717] dark:text-[#f8fafc] mr-auto;
   }
 }
