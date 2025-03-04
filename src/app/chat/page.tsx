@@ -239,23 +239,6 @@ export default function ChatPage() {
               isProcessing={isLoading}
             />
           </div>
-
-          {/* Chat Input */}
-          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-            <div className="relative">
-              <ChatInput
-                onSendMessage={sendMessage}
-                isLoading={isLoading}
-                language={settings.language}
-              />
-              <VoiceChat
-                voiceOptions={settings.voice}
-                language={settings.language}
-                onSpeechResult={handleVoiceResult}
-                isProcessing={isLoading}
-              />
-            </div>
-          </div>
         </div>
 
         {/* Right Sidebar - Information */}
@@ -346,6 +329,18 @@ export default function ChatPage() {
               <FiRefreshCw className="mr-1" size={14} />
               Reset
             </motion.button>
+          </div>
+          
+          <div className="relative">
+            <ChatInput
+              onSubmit={(text) => sendMessage(text)}
+              disabled={isLoading}
+            />
+            <VoiceChat
+              settings={settings}
+              onResult={handleVoiceResult}
+              disabled={isLoading}
+            />
           </div>
         </div>
       </div>
