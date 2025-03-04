@@ -7,7 +7,7 @@ interface SearchResult {
   htmlTitle?: string;
   htmlSnippet?: string;
   formattedUrl?: string;
-  pagemap?: Record<string, any>;
+  pagemap?: Record<string, unknown>;
 }
 
 interface SearchMetadata {

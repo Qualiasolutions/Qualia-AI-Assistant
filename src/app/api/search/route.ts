@@ -8,7 +8,7 @@ interface SearchResult {
   htmlTitle?: string;
   htmlSnippet?: string;
   formattedUrl?: string;
-  pagemap?: Record<string, any>;
+  pagemap?: Record<string, unknown>;
 }
 
 // Google search API response structure
@@ -23,7 +23,7 @@ interface GoogleSearchResponse {
       totalResults: string;
       searchTerms: string;
     }>;
-    nextPage?: Array<any>;
+    nextPage?: Array<Record<string, unknown>>;
   };
   error?: {
     code: number;
@@ -39,7 +39,7 @@ interface GoogleSearchItem {
   htmlTitle?: string;
   htmlSnippet?: string;
   formattedUrl?: string;
-  pagemap?: Record<string, any>;
+  pagemap?: Record<string, unknown>;
   // Use unknown instead of any for better type safety
   [key: string]: string | number | boolean | null | undefined | Record<string, unknown>;
 }

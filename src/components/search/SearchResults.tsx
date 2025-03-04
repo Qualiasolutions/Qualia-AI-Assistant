@@ -1,6 +1,13 @@
 import React from 'react';
 import { FiExternalLink, FiSearch, FiX } from 'react-icons/fi';
 import { motion } from 'framer-motion';
+import Image from 'next/image';
+
+interface ThumbnailObject {
+  src: string;
+  width?: string | number;
+  height?: string | number;
+}
 
 interface SearchResult {
   title: string;
@@ -9,7 +16,10 @@ interface SearchResult {
   htmlTitle?: string;
   htmlSnippet?: string;
   formattedUrl?: string;
-  pagemap?: Record<string, any>;
+  pagemap?: {
+    cse_thumbnail?: ThumbnailObject[];
+    [key: string]: unknown;
+  };
 }
 
 interface SearchMetadata {
@@ -47,6 +57,18 @@ export default function SearchResults({
     return {__html: html};
   };
 
+  // Display search metadata if available
+  const renderMetadata = () => {
+    if (metadata && !isSearching) {
+      return (
+        <div className="text-xs text-gray-500 dark:text-gray-400 px-4 py-1 bg-gray-50 dark:bg-gray-700 border-t border-gray-200 dark:border-gray-600">
+          About {metadata.totalResults.toLocaleString()} results ({metadata.searchTime.toFixed(2)} seconds)
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 10 }}
@@ -69,6 +91,8 @@ export default function SearchResults({
           <FiX />
         </button>
       </div>
+      
+      {renderMetadata()}
       
       <div className="max-h-96 overflow-y-auto p-4">
         {isSearching ? (
@@ -135,12 +159,15 @@ export default function SearchResults({
                 </div>
                 
                 {/* Show image thumbnails if available in pagemap */}
-                {result.pagemap?.cse_thumbnail && (
-                  <div className="mt-2">
-                    <img 
-                      src={result.pagemap.cse_thumbnail[0].src} 
+                {result.pagemap?.cse_thumbnail && 
+                 result.pagemap.cse_thumbnail.length > 0 && (
+                  <div className="mt-2 relative h-16 w-32">
+                    <Image 
+                      src={result.pagemap.cse_thumbnail[0].src}
                       alt={`Thumbnail for ${result.title}`}
-                      className="rounded h-16 border border-gray-200 dark:border-gray-700"
+                      className="rounded border border-gray-200 dark:border-gray-700 object-cover"
+                      fill
+                      sizes="128px"
                     />
                   </div>
                 )}

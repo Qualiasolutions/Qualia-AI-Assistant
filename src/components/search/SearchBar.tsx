@@ -13,13 +13,6 @@ interface SearchResult {
   formattedUrl?: string;
 }
 
-interface SearchMetadata {
-  totalResults: number;
-  searchTime: number;
-  hasNextPage: boolean;
-  searchTerms: string;
-}
-
 interface SearchBarProps {
   onSearchComplete?: (searchText: string, searchResults: string) => void;
 }
