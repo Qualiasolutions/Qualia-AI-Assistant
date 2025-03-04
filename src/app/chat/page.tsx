@@ -15,7 +15,7 @@ import { FiPlus, FiX, FiInfo } from 'react-icons/fi';
 export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, error, sendMessage, resetThread } = useChat();
-  const { settings, setLanguage, toggleVoice, setVoiceOptions } = useSettings();
+  const { settings, setLanguage, toggleVoice } = useSettings();
   const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -63,10 +63,6 @@ export default function ChatPage() {
     if (text.trim()) {
       sendMessage(text);
     }
-  };
-  
-  const handleSettingsUpdate = (newSettings: any) => {
-    setVoiceOptions(newSettings.voice);
   };
 
   return (

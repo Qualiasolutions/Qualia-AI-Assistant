@@ -5,7 +5,7 @@ import axios from 'axios';
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { text, voice, rate, pitch } = body;
+    const { text, voice } = body;
     
     if (!text) {
       return NextResponse.json(
