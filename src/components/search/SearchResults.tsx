@@ -1,10 +1,22 @@
 import React from 'react';
 import { FiExternalLink, FiSearch, FiX } from 'react-icons/fi';
+import { motion } from 'framer-motion';
 
 interface SearchResult {
   title: string;
   link: string;
   snippet: string;
+  htmlTitle?: string;
+  htmlSnippet?: string;
+  formattedUrl?: string;
+  pagemap?: Record<string, any>;
+}
+
+interface SearchMetadata {
+  totalResults: number;
+  searchTime: number;
+  hasNextPage: boolean;
+  searchTerms: string;
 }
 
 interface SearchResultsProps {
@@ -14,6 +26,7 @@ interface SearchResultsProps {
   query: string;
   onClose: () => void;
   onInsert?: (result: SearchResult) => void;
+  metadata?: SearchMetadata | null;
 }
 
 export default function SearchResults({
@@ -22,14 +35,25 @@ export default function SearchResults({
   error,
   query,
   onClose,
-  onInsert
+  onInsert,
+  metadata
 }: SearchResultsProps) {
   if (!query && !isSearching && results.length === 0) {
     return null;
   }
 
+  // Function to safely render HTML content
+  const createMarkup = (html: string) => {
+    return {__html: html};
+  };
+
   return (
-    <div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden w-full max-w-2xl">
+    <motion.div 
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 10 }}
+      className="rounded-t-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-lg overflow-hidden w-full max-w-2xl"
+    >
       <div className="flex items-center justify-between px-4 py-2 bg-gray-50 dark:bg-gray-700">
         <div className="flex items-center">
           <FiSearch className="text-gray-500 dark:text-gray-400 mr-2" />
@@ -46,7 +70,7 @@ export default function SearchResults({
         </button>
       </div>
       
-      <div className="p-4">
+      <div className="max-h-96 overflow-y-auto p-4">
         {isSearching ? (
           <div className="flex justify-center items-center py-8">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
@@ -64,13 +88,21 @@ export default function SearchResults({
         ) : (
           <div className="space-y-4">
             {results.map((result, index) => (
-              <div 
+              <motion.div 
                 key={`${result.link}-${index}`} 
-                className="p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors"
+                className="p-3 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-700"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: index * 0.05 }}
+                whileHover={{ scale: 1.01 }}
               >
                 <div className="flex justify-between items-start">
                   <h3 className="font-medium text-blue-600 dark:text-blue-400">
-                    {result.title}
+                    {result.htmlTitle ? (
+                      <span dangerouslySetInnerHTML={createMarkup(result.htmlTitle)} />
+                    ) : (
+                      result.title
+                    )}
                   </h3>
                   <div className="flex space-x-2">
                     {onInsert && (
@@ -92,16 +124,31 @@ export default function SearchResults({
                   </div>
                 </div>
                 <p className="text-sm text-gray-600 dark:text-gray-300 mt-1">
-                  {result.snippet}
+                  {result.htmlSnippet ? (
+                    <span dangerouslySetInnerHTML={createMarkup(result.htmlSnippet)} />
+                  ) : (
+                    result.snippet
+                  )}
                 </p>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
-                  {result.link}
+                  {result.formattedUrl || result.link}
                 </div>
-              </div>
+                
+                {/* Show image thumbnails if available in pagemap */}
+                {result.pagemap?.cse_thumbnail && (
+                  <div className="mt-2">
+                    <img 
+                      src={result.pagemap.cse_thumbnail[0].src} 
+                      alt={`Thumbnail for ${result.title}`}
+                      className="rounded h-16 border border-gray-200 dark:border-gray-700"
+                    />
+                  </div>
+                )}
+              </motion.div>
             ))}
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 } 
