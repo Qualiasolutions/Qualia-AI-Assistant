@@ -12,7 +12,8 @@ interface GoogleSearchItem {
   title: string;
   link: string;
   snippet?: string;
-  [key: string]: any; // Allow other properties without strict typing
+  // Use unknown instead of any for better type safety
+  [key: string]: string | number | boolean | null | undefined | Record<string, unknown>;
 }
 
 export async function POST(request: NextRequest) {
