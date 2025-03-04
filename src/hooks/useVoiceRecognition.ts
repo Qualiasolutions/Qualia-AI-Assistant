@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { isSpeechRecognitionSupported } from '@/lib/voice';
 
 type Language = 'el' | 'en';
@@ -15,78 +15,112 @@ export default function useVoiceRecognition({
   onError
 }: UseVoiceRecognitionProps) {
   const [isListening, setIsListening] = useState(false);
-  const [recognition, setRecognition] = useState<SpeechRecognition | null>(null);
   const [isSupported, setIsSupported] = useState(false);
-
-  // Initialize speech recognition
+  
+  // Use refs instead of state for objects that don't need re-renders
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const callbacksRef = useRef({ onResult, onError, language });
+  
+  // Update callback refs when props change
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const supported = isSpeechRecognitionSupported();
-      setIsSupported(supported);
-      
-      if (supported) {
-        // Create recognition instance
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognitionInstance = new SpeechRecognition();
+    callbacksRef.current = { onResult, onError, language };
+  }, [onResult, onError, language]);
+
+  // Initialize speech recognition just once
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    
+    const supported = isSpeechRecognitionSupported();
+    setIsSupported(supported);
+    
+    if (!supported) return;
+    
+    // Create recognition instance
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const recognitionInstance = new SpeechRecognition();
+    
+    // Configure recognition
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
+    recognitionInstance.lang = language === 'el' ? 'el-GR' : 'en-US';
+    
+    // Store in ref
+    recognitionRef.current = recognitionInstance;
+    
+    // Set up event handlers
+    const handleResult = (event: SpeechRecognitionEvent) => {
+      const transcript = Array.from(event.results)
+        .map(result => result[0])
+        .map(result => result.transcript)
+        .join('');
         
-        // Configure recognition
-        recognitionInstance.continuous = true;
-        recognitionInstance.interimResults = true;
-        recognitionInstance.lang = language === 'el' ? 'el-GR' : 'en-US';
-        
-        // Set up event handlers
-        recognitionInstance.onresult = (event) => {
-          const transcript = Array.from(event.results)
-            .map(result => result[0])
-            .map(result => result.transcript)
-            .join('');
-            
-          if (event.results[0].isFinal) {
-            onResult(transcript);
-          }
-        };
-        
-        recognitionInstance.onerror = (event) => {
-          onError(`Speech recognition error: ${event.error}`);
-          setIsListening(false);
-        };
-        
-        recognitionInstance.onend = () => {
-          setIsListening(false);
-        };
-        
-        setRecognition(recognitionInstance);
+      if (event.results[0].isFinal) {
+        callbacksRef.current.onResult(transcript);
       }
-    }
-  }, [language, onResult, onError]);
+    };
+    
+    const handleError = (event: SpeechRecognitionErrorEvent) => {
+      callbacksRef.current.onError(`Speech recognition error: ${event.error}`);
+      setIsListening(false);
+    };
+    
+    const handleEnd = () => {
+      setIsListening(false);
+    };
+    
+    recognitionInstance.onresult = handleResult;
+    recognitionInstance.onerror = handleError;
+    recognitionInstance.onend = handleEnd;
+    
+    // Cleanup on unmount
+    return () => {
+      if (recognitionRef.current) {
+        recognitionRef.current.onresult = null;
+        recognitionRef.current.onerror = null;
+        recognitionRef.current.onend = null;
+        
+        if (isListening) {
+          try {
+            recognitionRef.current.stop();
+          } catch (e) {
+            console.error('Error stopping recognition on unmount:', e);
+          }
+        }
+      }
+    };
+  }, []); // Empty dependency array = initialize once
 
   // Update language when it changes
   useEffect(() => {
-    if (recognition) {
-      recognition.lang = language === 'el' ? 'el-GR' : 'en-US';
+    if (recognitionRef.current) {
+      recognitionRef.current.lang = language === 'el' ? 'el-GR' : 'en-US';
     }
-  }, [language, recognition]);
+  }, [language]);
 
   // Start listening
   const startListening = useCallback(() => {
-    if (recognition && !isListening) {
+    if (recognitionRef.current && !isListening) {
       try {
-        recognition.start();
+        recognitionRef.current.start();
         setIsListening(true);
       } catch (error) {
-        onError('Failed to start speech recognition');
+        callbacksRef.current.onError('Failed to start speech recognition');
         console.error('Speech recognition error:', error);
       }
     }
-  }, [recognition, isListening, onError]);
+  }, [isListening]);
 
   // Stop listening
   const stopListening = useCallback(() => {
-    if (recognition && isListening) {
-      recognition.stop();
-      setIsListening(false);
+    if (recognitionRef.current && isListening) {
+      try {
+        recognitionRef.current.stop();
+        setIsListening(false);
+      } catch (error) {
+        console.error('Error stopping recognition:', error);
+      }
     }
-  }, [recognition, isListening]);
+  }, [isListening]);
 
   return {
     isListening,

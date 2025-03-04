@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { Message } from '@/types';
 import { speakText } from '@/lib/voice';
 import { motion } from 'framer-motion';
+import { FiUser, FiMessageSquare } from 'react-icons/fi';
 
 interface ChatMessageProps {
   message: Message;
@@ -35,8 +36,8 @@ export default function ChatMessage({
 
   const isUser = message.role === 'user';
 
-  // Ensure timestamp is a valid Date object
-  const formatTime = () => {
+  // Memoize the formatted time to prevent unnecessary re-renders
+  const formattedTime = useMemo(() => {
     try {
       // If timestamp is already a Date object
       if (message.timestamp instanceof Date) {
@@ -67,35 +68,48 @@ export default function ChatMessage({
         { hour: '2-digit', minute: '2-digit' }
       );
     }
-  };
+  }, [message.timestamp, voiceOptions.language]);
 
   return (
     <motion.div
-      className={`${isUser ? 'user-message' : 'assistant-message'} mb-4`}
+      className={`w-full mb-5 ${isUser ? 'flex justify-end' : 'flex justify-start'}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <div className="flex items-start">
+      <div className={`flex max-w-[80%] md:max-w-[70%]`}>
         {!isUser && (
-          <div className="flex-shrink-0 w-8 h-8 bg-[#145199] rounded-full flex items-center justify-center text-white mr-2">
-            Q
+          <div className="flex-shrink-0 h-9 w-9 bg-gradient-to-br from-[#145199] to-[#0a2d5c] rounded-full flex items-center justify-center text-white mr-2 shadow-md">
+            <FiMessageSquare className="w-4 h-4" />
           </div>
         )}
-        <div
-          ref={contentRef}
-          className="flex-1 whitespace-pre-wrap"
-        >
-          {message.content}
+        
+        <div className="flex flex-col">
+          <div 
+            ref={contentRef}
+            className={`
+              py-3 px-4 rounded-2xl shadow-sm
+              ${isUser 
+                ? 'bg-gradient-to-r from-[#145199] to-[#1a62b3] text-white' 
+                : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+              }
+            `}
+          >
+            <div className="whitespace-pre-wrap text-sm">
+              {message.content}
+            </div>
+          </div>
+          
+          <div className={`text-xs mt-1 text-gray-500 flex items-center ${isUser ? 'justify-end' : 'justify-start'}`}>
+            <span className="opacity-70">{formattedTime}</span>
+          </div>
         </div>
+        
         {isUser && (
-          <div className="flex-shrink-0 w-8 h-8 bg-gray-300 dark:bg-gray-600 rounded-full flex items-center justify-center ml-2">
-            U
+          <div className="flex-shrink-0 h-9 w-9 bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center ml-2 shadow-md">
+            <FiUser className="w-4 h-4 text-gray-700 dark:text-gray-300" />
           </div>
         )}
-      </div>
-      <div className={`text-xs mt-1 text-gray-500 ${isUser ? 'text-right' : 'text-left'}`}>
-        {formatTime()}
       </div>
     </motion.div>
   );

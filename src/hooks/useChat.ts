@@ -119,23 +119,45 @@ export default function useChat() {
       // Send message to API
       const runId = await apiClient.sendMessage(threadId, content);
       
-      // Poll for completion
-      const pollInterval = setInterval(async () => {
-        const status = await apiClient.getRunStatus(threadId, runId);
-        
-        if (status === 'completed') {
-          clearInterval(pollInterval);
-          
-          // Get updated messages
-          const updatedMessages = await apiClient.getMessages(threadId);
-          setMessages(updatedMessages);
-          setIsLoading(false);
-        } else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
-          clearInterval(pollInterval);
-          setError('Failed to process your message. Please try again.');
-          setIsLoading(false);
-        }
-      }, 1000);
+      // Store intervalId so we can clear it in case of component unmount
+      let pollIntervalId: NodeJS.Timeout;
+      
+      // Create a promise that will resolve when polling is complete
+      const pollingPromise = new Promise<void>((resolve, reject) => {
+        // Poll for completion
+        pollIntervalId = setInterval(async () => {
+          try {
+            const status = await apiClient.getRunStatus(threadId, runId);
+            
+            if (status === 'completed') {
+              clearInterval(pollIntervalId);
+              
+              // Get updated messages
+              const updatedMessages = await apiClient.getMessages(threadId);
+              setMessages(updatedMessages);
+              setIsLoading(false);
+              resolve();
+            } else if (status === 'failed' || status === 'cancelled' || status === 'expired') {
+              clearInterval(pollIntervalId);
+              setError('Failed to process your message. Please try again.');
+              setIsLoading(false);
+              reject(new Error(`Run failed with status: ${status}`));
+            }
+          } catch (err) {
+            clearInterval(pollIntervalId);
+            reject(err);
+          }
+        }, 1000);
+      });
+      
+      // Handle potential errors from the polling promise
+      pollingPromise.catch((err) => {
+        console.error('Error during message polling:', err);
+        setError('Failed to process your message. Please try again.');
+        setIsLoading(false);
+      });
+
+      return pollingPromise;
     } catch (err) {
       setError('Failed to send message. Please try again.');
       setIsLoading(false);

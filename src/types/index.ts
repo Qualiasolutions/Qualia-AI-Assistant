@@ -23,6 +23,8 @@ export interface VoiceOptions {
   volume: number;
   rate: number;
   pitch: number;
+  useEnhancedVoices?: boolean;
+  voiceId?: string;
 }
 
 export interface AppSettings {
