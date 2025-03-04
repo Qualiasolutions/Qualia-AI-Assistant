@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { FiUsers, FiFileText, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import { FiUsers, FiChevronDown, FiChevronUp } from 'react-icons/fi';
+import useLeads from '@/hooks/useLeads';
+import { Lead } from '@/types';
 
 type ExpandableSectionProps = {
   title: string;
@@ -32,7 +34,29 @@ function ExpandableSection({ title, icon, children }: ExpandableSectionProps) {
   );
 }
 
+function LeadItem({ lead }: { lead: Lead }) {
+  return (
+    <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
+      <p className="font-medium">{lead.companyName}</p>
+      <p className="text-xs text-gray-500 dark:text-gray-400">{lead.industry} • {lead.location}</p>
+      <p className="text-xs mt-1">
+        Status: <span className={`${
+          lead.status === 'new' ? 'text-amber-600 dark:text-amber-400' : 
+          lead.status === 'contacted' ? 'text-blue-600 dark:text-blue-400' :
+          lead.status === 'qualified' ? 'text-green-600 dark:text-green-400' :
+          lead.status === 'converted' ? 'text-purple-600 dark:text-purple-400' :
+          'text-red-600 dark:text-red-400'
+        }`}>
+          {lead.status.charAt(0).toUpperCase() + lead.status.slice(1)}
+        </span>
+      </p>
+    </div>
+  );
+}
+
 export default function DataSidebar() {
+  const { leads, isLoading, error } = useLeads();
+  
   return (
     <div className="flex flex-col p-4 h-full">
       <h2 className="text-lg font-semibold mb-4">Business Data</h2>
@@ -41,46 +65,34 @@ export default function DataSidebar() {
         title="Recent Leads" 
         icon={<FiUsers className="text-blue-500" />}
       >
-        <div className="space-y-3">
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-            <p className="font-medium">Furniture Planet</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Retail Store • Athens</p>
-            <p className="text-xs mt-1">Status: <span className="text-green-600 dark:text-green-400">Contacted</span></p>
+        {isLoading ? (
+          <div className="text-center py-2">
+            <p className="text-sm text-gray-500">Loading leads...</p>
           </div>
-          
-          <div className="p-2 bg-blue-50 dark:bg-blue-900/20 rounded">
-            <p className="font-medium">Home Design Co.</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Interior Design • Thessaloniki</p>
-            <p className="text-xs mt-1">Status: <span className="text-amber-600 dark:text-amber-400">New</span></p>
+        ) : error ? (
+          <div className="text-center py-2">
+            <p className="text-sm text-red-500">Error loading leads</p>
           </div>
-          
-          <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2">
-            View all leads →
-          </button>
-        </div>
-      </ExpandableSection>
-      
-      <ExpandableSection 
-        title="Recent Invoices" 
-        icon={<FiFileText className="text-green-500" />}
-      >
-        <div className="space-y-3">
-          <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
-            <p className="font-medium">INV-2023-0458</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Home Essentials Ltd • €3,250</p>
-            <p className="text-xs mt-1">Status: <span className="text-green-600 dark:text-green-400">Paid</span></p>
+        ) : leads.length === 0 ? (
+          <div className="text-center py-2">
+            <p className="text-sm text-gray-500">No leads found</p>
+            <p className="text-xs text-gray-400 mt-1">
+              Try asking the assistant to generate leads for your business
+            </p>
           </div>
-          
-          <div className="p-2 bg-green-50 dark:bg-green-900/20 rounded">
-            <p className="font-medium">INV-2023-0459</p>
-            <p className="text-xs text-gray-500 dark:text-gray-400">Comfort Living • €1,820</p>
-            <p className="text-xs mt-1">Status: <span className="text-amber-600 dark:text-amber-400">Pending</span></p>
+        ) : (
+          <div className="space-y-3">
+            {leads.slice(0, 5).map(lead => (
+              <LeadItem key={lead.id} lead={lead} />
+            ))}
+            
+            {leads.length > 5 && (
+              <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2">
+                View all leads ({leads.length}) →
+              </button>
+            )}
           </div>
-          
-          <button className="text-xs text-blue-600 dark:text-blue-400 hover:underline mt-2">
-            View all invoices →
-          </button>
-        </div>
+        )}
       </ExpandableSection>
     </div>
   );

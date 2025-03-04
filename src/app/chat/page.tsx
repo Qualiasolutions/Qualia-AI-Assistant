@@ -11,6 +11,7 @@ import DataSidebar from '@/components/ui/DataSidebar';
 import InfoSidebar from '@/components/ui/InfoSidebar';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
+import useLeads from '@/hooks/useLeads';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
@@ -20,8 +21,10 @@ export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, sendMessage, resetThread, setMessages, forceReset } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
+  const { extractLeadsFromMessage, createLead } = useLeads();
   const [showInfo, setShowInfo] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const processedMessagesRef = useRef<Set<string>>(new Set());
 
   // Add welcome message if no messages exist
   useEffect(() => {
@@ -35,7 +38,40 @@ export default function ChatPage() {
       
       setMessages([welcomeMessage]);
     }
-  }, [messages, isLoading, setMessages]);
+  }, [messages.length, isLoading, setMessages]);
+
+  // Process assistant messages for leads
+  useEffect(() => {
+    const processLeads = async () => {
+      // Only check if there are messages and we're not in a loading state
+      if (messages.length === 0 || isLoading) return;
+      
+      // Find the most recent assistant message
+      const assistantMessages = [...messages].filter(msg => msg.role === 'assistant');
+      if (assistantMessages.length === 0) return;
+      
+      // Get the latest message
+      const latestMessage = assistantMessages[assistantMessages.length - 1];
+      
+      // Only process if we haven't seen this message ID before
+      if (!processedMessagesRef.current.has(latestMessage.id)) {
+        // Extract leads from the message
+        const potentialLeads = extractLeadsFromMessage(latestMessage.content);
+        
+        // Create leads if any were found
+        if (potentialLeads.length > 0) {
+          for (const leadData of potentialLeads) {
+            await createLead(leadData);
+          }
+        }
+        
+        // Mark as processed
+        processedMessagesRef.current.add(latestMessage.id);
+      }
+    };
+    
+    processLeads();
+  }, [messages, isLoading, extractLeadsFromMessage, createLead]);
 
   // Check if user is authenticated
   useEffect(() => {

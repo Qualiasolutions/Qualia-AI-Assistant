@@ -2,9 +2,50 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import { Lead } from '@/types';
 
-// In a real application, this would be a database connection
-// For demo purposes, we'll use localStorage on the client and this in-memory store on the server
-const leadsStore: Lead[] = [];
+// In-memory store as a fallback
+let leadsStore: Lead[] = [];
+
+// Helper function to load leads from localStorage (client-side only)
+const loadLeadsFromStorage = (): Lead[] => {
+  if (typeof window !== 'undefined') {
+    try {
+      const storedLeads = localStorage.getItem('tzironis_leads');
+      if (storedLeads) {
+        // Parse dates back to Date objects
+        const parsed = JSON.parse(storedLeads);
+        return parsed.map((lead: any) => ({
+          ...lead,
+          createdAt: new Date(lead.createdAt),
+          updatedAt: new Date(lead.updatedAt)
+        }));
+      }
+    } catch (error) {
+      console.error('Error loading leads from storage:', error);
+    }
+  }
+  return [];
+};
+
+// Helper function to save leads to localStorage (client-side only)
+const saveLeadsToStorage = (leads: Lead[]) => {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('tzironis_leads', JSON.stringify(leads));
+    } catch (error) {
+      console.error('Error saving leads to storage:', error);
+    }
+  }
+};
+
+// Initialize leads store from localStorage if available
+try {
+  const initialLeads = loadLeadsFromStorage();
+  if (initialLeads.length > 0) {
+    leadsStore = initialLeads;
+  }
+} catch (error) {
+  console.error('Error initializing leads store:', error);
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -70,6 +111,9 @@ export async function POST(request: NextRequest) {
     // Add to store
     leadsStore.push(newLead);
     
+    // Persist to localStorage
+    saveLeadsToStorage(leadsStore);
+    
     return NextResponse.json({ lead: newLead }, { status: 201 });
   } catch (error) {
     console.error('Error creating lead:', error);
@@ -112,6 +156,9 @@ export async function PUT(request: NextRequest) {
     // Replace in store
     leadsStore[leadIndex] = updatedLead;
     
+    // Persist to localStorage
+    saveLeadsToStorage(leadsStore);
+    
     return NextResponse.json({ lead: updatedLead });
   } catch (error) {
     console.error('Error updating lead:', error);
@@ -146,6 +193,9 @@ export async function DELETE(request: NextRequest) {
     
     // Remove from store
     leadsStore.splice(leadIndex, 1);
+    
+    // Persist to localStorage
+    saveLeadsToStorage(leadsStore);
     
     return NextResponse.json({ success: true });
   } catch (error) {
