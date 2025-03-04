@@ -17,16 +17,23 @@ import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiX, FiRefreshCw, FiGlobe } from 'react-icons/fi';
 import { Message } from '@/types';
+import useSearch from '@/hooks/useSearch';
 
 export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, sendMessage, resetThread, setMessages, forceReset } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
   const { extractLeadsFromMessage, createLead } = useLeads();
+  const { search } = useSearch();
   const [showInfo, setShowInfo] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessagesRef = useRef<Set<string>>(new Set());
+  const [activeSidebar, setActiveSidebar] = useState<'left' | 'right' | null>(null);
+  const [input, setInput] = useState('');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [previousConversation, setPreviousConversation] = useState<Message[]>([]);
 
   // Add welcome message if no messages exist
   useEffect(() => {
@@ -131,14 +138,107 @@ export default function ChatPage() {
 
   // Handle web search results
   const handleSearchComplete = (searchText: string, searchResults: string) => {
-    // Format the search context for the assistant
-    const searchContext = `Web search results for "${searchText}":\n\n${searchResults}\n\nBased on these search results, `;
+    // Remove the searching message
+    setMessages(prev => prev.filter(msg => !msg.id.startsWith('searching-')));
     
-    // Send the search results as a user message
-    sendMessage(`${searchContext}please provide an answer about "${searchText}".`);
+    // Create system message with web search results
+    const searchContextMessage: Message = {
+      id: `context-${Date.now()}`,
+      role: 'system',
+      content: `Web search results for "${searchText}":\n\n${searchResults}`,
+      timestamp: new Date(),
+    };
     
-    // Hide search after submission
-    setShowSearch(false);
+    // Add user query message
+    const userMessage: Message = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: searchText,
+      timestamp: new Date(),
+    };
+    
+    // Add messages to the chat
+    setMessages(prev => [...prev, userMessage, searchContextMessage]);
+    
+    // Trigger the assistant to respond with a placeholder message
+    const loadingMessage: Message = {
+      id: `loading-${Date.now()}`,
+      role: 'assistant',
+      content: 'Analyzing search results...',
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, loadingMessage]);
+    
+    // Process message with backend
+    sendMessage(searchText);
+  };
+
+  // Detect if the message needs a web search
+  const handleSendMessage = (text: string) => {
+    // Check if the message appears to be a question that might benefit from web search
+    const needsWebSearch = 
+      (text.includes('?') || 
+       text.toLowerCase().startsWith('what') || 
+       text.toLowerCase().startsWith('how') || 
+       text.toLowerCase().startsWith('why') || 
+       text.toLowerCase().startsWith('when') || 
+       text.toLowerCase().startsWith('where') ||
+       text.toLowerCase().startsWith('who') ||
+       text.toLowerCase().startsWith('which') ||
+       text.toLowerCase().includes('search for') ||
+       text.toLowerCase().includes('find information')) &&
+      text.length > 10;
+
+    if (needsWebSearch) {
+      // Display a temporary message indicating search is happening
+      const searchingMessage: Message = {
+        id: `searching-${Date.now()}`,
+        role: 'assistant',
+        content: `I'll search the web for information about "${text}" and get back to you with what I find.`,
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, searchingMessage]);
+      
+      // Perform web search automatically
+      performWebSearch(text);
+    } else {
+      // Normal message without web search
+      sendMessage(text);
+    }
+  };
+
+  // Function to perform web search
+  const performWebSearch = async (query: string) => {
+    try {
+      const results = await search(query);
+      
+      if (results && results.length > 0) {
+        const formattedResults = results.map((result, index) => {
+          return `[${index + 1}] ${result.title}\n${result.snippet}\nSource: ${result.link}\n`;
+        }).join('\n');
+        
+        // Send the search results to the assistant
+        handleSearchComplete(query, formattedResults);
+      } else {
+        // No results found
+        const noResultsMessage: Message = {
+          id: `no-results-${Date.now()}`,
+          role: 'assistant',
+          content: `I searched the web for "${query}" but couldn't find relevant information. Let me answer based on what I know.`,
+          timestamp: new Date(),
+        };
+        
+        setMessages(prev => [...prev, noResultsMessage]);
+        sendMessage(query);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+      
+      // Send message without search results
+      sendMessage(query);
+    }
   };
 
   return (
@@ -161,13 +261,6 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col max-w-full">
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8">
             <div className="max-w-4xl mx-auto">
-              {/* Show search bar if search is enabled */}
-              {showSearch && (
-                <div className="mb-6">
-                  <SearchBar onSearchComplete={handleSearchComplete} />
-                </div>
-              )}
-              
               {/* Message list */}
               <div className="space-y-6">
                 <div className="sticky top-0 z-10 mb-4 flex justify-center space-x-2">
@@ -179,16 +272,6 @@ export default function ChatPage() {
                   >
                     <FiPlus className="mr-1" />
                     <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
-                  </motion.button>
-
-                  <motion.button
-                    onClick={() => setShowSearch(!showSearch)}
-                    className="px-4 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-full shadow-md hover:shadow-lg transition-shadow flex items-center"
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                  >
-                    <FiGlobe className="mr-1" />
-                    <span>{settings.language === 'el' ? 'Αναζήτηση' : 'Search'}</span>
                   </motion.button>
 
                   {isLoading && (
@@ -241,19 +324,18 @@ export default function ChatPage() {
           </div>
 
           {/* Input area with chat input and voice chat */}
-          <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
-            <div className="max-w-4xl mx-auto relative">
-              <ChatInput
-                onSendMessage={(text) => sendMessage(text)}
+          <div className="p-3 md:p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-b-lg shadow-lg">
+            <div className="max-w-4xl mx-auto">
+              <ChatInput 
+                onSendMessage={handleSendMessage}
                 isLoading={isLoading}
                 language={settings.language || 'en'}
               />
-              
               <div className="mt-2">
                 <VoiceChat
                   voiceOptions={settings.voice}
                   language={settings.language || 'en'}
-                  onSpeechResult={handleVoiceResult}
+                  onSpeechResult={handleSendMessage}
                   isProcessing={isLoading}
                 />
               </div>
