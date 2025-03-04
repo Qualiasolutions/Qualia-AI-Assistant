@@ -22,6 +22,24 @@ module.exports = {
           dark: 'var(--primary-dark)',
         },
       },
+      backgroundColor: {
+        background: 'var(--background)',
+        foreground: 'var(--foreground)',
+        card: 'var(--card)',
+        primary: 'var(--primary)',
+        'primary-light': 'var(--primary-light)',
+        'primary-dark': 'var(--primary-dark)',
+      },
+      textColor: {
+        foreground: 'var(--foreground)',
+        'card-foreground': 'var(--card-foreground)',
+        primary: 'var(--primary)',
+      },
+      borderColor: {
+        border: 'var(--border)',
+        input: 'var(--input)',
+        ring: 'var(--ring)',
+      },
       fontFamily: {
         sans: ['var(--font-inter)', 'sans-serif'],
       },
