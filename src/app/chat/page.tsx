@@ -9,13 +9,12 @@ import VoiceChat from '@/components/chat/VoiceChat';
 import Sidebar from '@/components/ui/Sidebar';
 import DataSidebar from '@/components/ui/DataSidebar';
 import InfoSidebar from '@/components/ui/InfoSidebar';
-import SearchBar from '@/components/search/SearchBar';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
 import useLeads from '@/hooks/useLeads';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiPlus, FiX, FiRefreshCw, FiGlobe } from 'react-icons/fi';
+import { FiPlus, FiX, FiRefreshCw } from 'react-icons/fi';
 import { Message } from '@/types';
 import useSearch from '@/hooks/useSearch';
 
@@ -29,11 +28,7 @@ export default function ChatPage() {
   const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessagesRef = useRef<Set<string>>(new Set());
-  const [activeSidebar, setActiveSidebar] = useState<'left' | 'right' | null>(null);
-  const [input, setInput] = useState('');
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [previousConversation, setPreviousConversation] = useState<Message[]>([]);
+  const [user, setUser] = useState<{ username: string; isAdmin: boolean } | null>(null);
 
   // Add welcome message if no messages exist
   useEffect(() => {
@@ -82,16 +77,35 @@ export default function ChatPage() {
     processLeads();
   }, [messages, isLoading, extractLeadsFromMessage, createLead]);
 
-  // Check if user is authenticated
+  // Check authentication
   useEffect(() => {
     const checkAuth = async () => {
       try {
-        const response = await fetch('/api/auth/user');
-        if (!response.ok) {
+        // Get token from localStorage
+        const token = localStorage.getItem('authToken');
+        
+        if (!token) {
           router.push('/auth');
+          return;
         }
+        
+        const response = await fetch('/api/auth/user', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          localStorage.removeItem('authToken');
+          router.push('/auth');
+          return;
+        }
+        
+        const data = await response.json();
+        setUser(data.user);
       } catch (error) {
         console.error('Error checking authentication:', error);
+        localStorage.removeItem('authToken');
         router.push('/auth');
       }
     };
@@ -124,13 +138,6 @@ export default function ChatPage() {
     setShowSearch(false);
   };
   
-  const handleVoiceResult = (text: string) => {
-    if (text.trim()) {
-      sendMessage(text);
-    }
-  };
-
-  // Add a recovery function for stuck states
   const handleForceReset = () => {
     stopSpeaking();
     forceReset();
@@ -230,15 +237,48 @@ export default function ChatPage() {
           timestamp: new Date(),
         };
         
-        setMessages(prev => [...prev, noResultsMessage]);
+        setMessages(prev => {
+          // Filter out searching message
+          const filteredMessages = prev.filter(msg => !msg.id.startsWith('searching-'));
+          // Add the "no results" message
+          return [...filteredMessages, noResultsMessage];
+        });
+        
+        // Let the assistant respond normally
         sendMessage(query);
       }
     } catch (error) {
-      console.error('Search error:', error);
+      console.error('Web search error:', error);
       
-      // Send message without search results
+      // Remove the searching message
+      setMessages(prev => {
+        // Filter out searching message
+        const filteredMessages = prev.filter(msg => !msg.id.startsWith('searching-'));
+        
+        // Add error message
+        const errorMessage: Message = {
+          id: `search-error-${Date.now()}`,
+          role: 'assistant',
+          content: 'I encountered an error while searching the web. Let me answer your question based on what I already know.',
+          timestamp: new Date(),
+        };
+        
+        return [...filteredMessages, errorMessage];
+      });
+      
+      // Let the assistant respond normally
       sendMessage(query);
     }
+  };
+
+  const toggleSearch = () => {
+    setShowSearch(!showSearch);
+    setShowInfo(false);
+  };
+
+  const toggleInfo = () => {
+    setShowInfo(!showInfo);
+    setShowSearch(false);
   };
 
   return (
@@ -249,6 +289,7 @@ export default function ChatPage() {
         onLanguageChange={setLanguage}
         onVoiceToggle={toggleVoice}
         onSettingsClick={handleSettingsClick}
+        username={user?.username}
       />
 
       <div className="flex flex-1 overflow-hidden">

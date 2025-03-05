@@ -1,24 +1,34 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { validateSession } from '@/lib/auth';
+import { verifyToken, validateSession } from '@/lib/auth';
 
 export async function GET(request: NextRequest) {
   try {
-    // Get user from cookie
-    const userCookie = request.cookies.get('user')?.value;
+    // Get auth token from cookies or Authorization header
+    const token = 
+      request.cookies.get('authToken')?.value ||
+      request.headers.get('Authorization')?.split(' ')[1];
     
-    if (!userCookie) {
+    if (!token) {
       return NextResponse.json(
         { message: 'Not authenticated' },
         { status: 401 }
       );
     }
 
-    const user = JSON.parse(userCookie);
-    
-    // Validate session
-    if (!validateSession(user)) {
+    // Validate token
+    if (!validateSession(token)) {
       return NextResponse.json(
-        { message: 'Invalid session' },
+        { message: 'Invalid or expired token' },
+        { status: 401 }
+      );
+    }
+
+    // Decode the token to get user information
+    const user = verifyToken(token);
+    
+    if (!user) {
+      return NextResponse.json(
+        { message: 'Invalid token' },
         { status: 401 }
       );
     }

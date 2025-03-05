@@ -5,7 +5,7 @@ import { Message } from '@/types';
 // This should only be called on the server side
 const getOpenAIClient = () => {
   const apiKey = process.env.OPENAI_API_KEY;
-  const assistantId = process.env.OPENAI_ASSISTANT_ID;
+  const assistantId = process.env.ASSISTANT_ID;
 
   if (!apiKey) {
     console.error('OPENAI_API_KEY environment variable is not set. Please configure it in environment variables.');
@@ -13,7 +13,7 @@ const getOpenAIClient = () => {
   }
 
   if (!assistantId) {
-    console.error('OPENAI_ASSISTANT_ID environment variable is not set. Please configure it in environment variables.');
+    console.error('ASSISTANT_ID environment variable is not set. Please configure it in environment variables.');
     throw new Error('Missing OpenAI Assistant ID');
   }
 
@@ -72,10 +72,21 @@ export async function getRunStatus(threadId: string, runId: string) {
   }
 }
 
-export async function getMessages(threadId: string): Promise<Message[]> {
+export async function getMessages(threadId: string, limit = 20, before?: string): Promise<Message[]> {
   try {
     const { client } = getOpenAIClient();
-    const messages = await client.beta.threads.messages.list(threadId);
+    
+    // Prepare pagination parameters
+    const params: { limit: number; before?: string; order?: 'asc' | 'desc' } = {
+      limit,
+      order: 'desc' // Most recent first
+    };
+    
+    if (before) {
+      params.before = before;
+    }
+    
+    const messages = await client.beta.threads.messages.list(threadId, params);
     
     return messages.data.map((message) => ({
       id: message.id,
@@ -84,7 +95,7 @@ export async function getMessages(threadId: string): Promise<Message[]> {
         ? message.content[0].text.value 
         : 'Unsupported message type',
       timestamp: new Date(message.created_at * 1000),
-    })).reverse();
+    }));
   } catch (error) {
     console.error('Error getting messages:', error);
     throw new Error('Failed to retrieve messages');

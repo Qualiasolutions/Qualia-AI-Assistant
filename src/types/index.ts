@@ -1,61 +1,71 @@
 export interface User {
-  username: string;
-  isAdmin: boolean;
+  readonly username: string;
+  readonly isAdmin: boolean;
 }
 
+export type MessageRole = 'user' | 'assistant' | 'system';
+
 export interface Message {
-  id: string;
-  role: 'user' | 'assistant' | 'system';
-  content: string;
-  timestamp: Date;
+  readonly id: string;
+  readonly role: MessageRole;
+  readonly content: string;
+  readonly timestamp: Date;
 }
 
 export interface Thread {
-  id: string;
-  messages: Message[];
-  createdAt: Date;
-  updatedAt: Date;
+  readonly id: string;
+  readonly messages: readonly Message[];
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
 }
+
+export type VoiceLanguage = 'el' | 'en';
 
 export interface VoiceOptions {
   enabled: boolean;
-  language: 'el' | 'en';
-  volume: number;
-  rate: number;
-  pitch: number;
+  language: VoiceLanguage;
+  volume: number; // 0 to 1
+  rate: number; // 0.1 to 10
+  pitch: number; // 0 to 2
   useEnhancedVoices?: boolean;
   voiceId?: string;
 }
 
+export type ThemeOption = 'light' | 'dark' | 'system';
+
 export interface AppSettings {
-  theme: 'light' | 'dark' | 'system';
-  language: 'el' | 'en';
+  theme: ThemeOption;
+  language: VoiceLanguage;
   voice: VoiceOptions;
 }
 
 export interface LeadGenerationRequest {
   industry: string;
   location: string;
-  criteria?: string[];
+  criteria?: readonly string[];
+}
+
+export interface InvoiceItem {
+  readonly name: string;
+  readonly quantity: number;
+  readonly price: number;
 }
 
 export interface InvoiceCreationRequest {
-  customer: string;
-  items: {
-    name: string;
-    quantity: number;
-    price: number;
-  }[];
-  notes?: string;
+  readonly customer: string;
+  readonly items: readonly InvoiceItem[];
+  readonly notes?: string;
+}
+
+export interface PriceRange {
+  readonly min?: number;
+  readonly max?: number;
 }
 
 export interface ProductQuery {
-  category?: string;
-  inStock?: boolean;
-  priceRange?: {
-    min?: number;
-    max?: number;
-  };
+  readonly category?: string;
+  readonly inStock?: boolean;
+  readonly priceRange?: PriceRange;
 }
 
 export type AssistantPurpose = 
@@ -64,19 +74,44 @@ export type AssistantPurpose =
   | 'product_info'
   | 'general_query';
 
+export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
+
 export interface Lead {
-  id: string;
-  companyName: string;
-  industry: string;
-  location: string;
-  contactPerson?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  notes?: string;
-  source: string;
-  createdAt: Date;
-  updatedAt: Date;
-  status: 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
-  assignedTo?: string;
+  readonly id: string;
+  readonly companyName: string;
+  readonly industry: string;
+  readonly location: string;
+  readonly contactPerson?: string;
+  readonly phone?: string;
+  readonly email?: string;
+  readonly website?: string;
+  readonly notes?: string;
+  readonly source: string;
+  readonly createdAt: Date;
+  readonly updatedAt: Date;
+  readonly status: LeadStatus;
+  readonly assignedTo?: string;
+}
+
+export interface ApiResponse<T> {
+  readonly data?: T;
+  readonly error?: string;
+  readonly status: number;
+}
+
+export interface ApiErrorResponse {
+  readonly message: string;
+  readonly code?: string;
+  readonly status: number;
+}
+
+export interface AuthResponse {
+  readonly user: User;
+  readonly token: string;
+}
+
+export interface SearchResult {
+  readonly title: string;
+  readonly link: string;
+  readonly snippet: string;
 } 

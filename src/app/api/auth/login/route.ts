@@ -1,39 +1,32 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authenticate } from '@/lib/auth';
+import { authenticateUser } from '@/lib/auth';
 
 export async function POST(request: NextRequest) {
   try {
-    const { username } = await request.json();
+    const { username, password } = await request.json();
 
-    if (!username) {
+    if (!username || !password) {
       return NextResponse.json(
-        { message: 'Username is required' },
+        { message: 'Username and password are required' },
         { status: 400 }
       );
     }
 
-    const user = authenticate(username);
+    const result = await authenticateUser(username, password);
 
-    if (!user) {
+    if (!result) {
       return NextResponse.json(
-        { message: 'Invalid username' },
+        { message: 'Invalid username or password' },
         { status: 401 }
       );
     }
 
-    // In a production app, we would use a secure HTTP-only cookie
-    // and proper session management. For this demo, we'll use a simple
-    // cookie to store the user information.
+    const { user, token } = result;
+
+    // Return the token to the client
     return NextResponse.json(
-      { user },
-      {
-        status: 200,
-        headers: {
-          'Set-Cookie': `user=${JSON.stringify(user)}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${
-            60 * 60 * 24 * 7 // 1 week
-          }`,
-        },
-      }
+      { user, token },
+      { status: 200 }
     );
   } catch (error) {
     console.error('Login error:', error);

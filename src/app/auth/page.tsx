@@ -6,8 +6,10 @@ import { motion } from 'framer-motion';
 
 export default function AuthPage() {
   const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isRegister, setIsRegister] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,19 +23,54 @@ export default function AuthPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ username }),
+        body: JSON.stringify({ username, password }),
       });
 
       if (response.ok) {
+        const data = await response.json();
+        // Store the JWT token in localStorage
+        localStorage.setItem('authToken', data.token);
         // Authentication successful, redirect to chat
         router.push('/chat');
       } else {
         const data = await response.json();
-        setError(data.message || 'Invalid username');
+        setError(data.message || 'Invalid username or password');
       }
     } catch (err) {
       setError('Failed to login. Please try again.');
       console.error('Login error:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRegister = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ username, password }),
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Store the JWT token in localStorage
+        localStorage.setItem('authToken', data.token);
+        // Registration successful, redirect to chat
+        router.push('/chat');
+      } else {
+        const data = await response.json();
+        setError(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError('Failed to register. Please try again.');
+      console.error('Registration error:', err);
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +102,9 @@ export default function AuthPage() {
             </motion.div>
           </div>
           <h1 className="text-3xl font-bold text-foreground">Qualia AI Assistant</h1>
-          <p className="text-foreground/80 mt-2">Enter your name to access your AI assistant</p>
+          <p className="text-foreground/80 mt-2">
+            {isRegister ? 'Create an account to get started' : 'Sign in to access your AI assistant'}
+          </p>
         </div>
 
         <motion.div 
@@ -73,7 +112,7 @@ export default function AuthPage() {
           whileHover={{ boxShadow: "0 10px 25px rgba(0,0,0,0.1)" }}
           transition={{ duration: 0.3 }}
         >
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={isRegister ? handleRegister : handleSubmit} className="space-y-4">
             {error && (
               <motion.div 
                 className="bg-red-100 dark:bg-red-900/30 border border-red-400 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg relative" 
@@ -88,7 +127,7 @@ export default function AuthPage() {
             
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-foreground mb-1">
-                Your Name
+                Username
               </label>
               <input
                 id="username"
@@ -98,7 +137,22 @@ export default function AuthPage() {
                 className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none transition-all"
                 required
                 autoFocus
-                placeholder="Enter your name"
+                placeholder="Enter your username"
+              />
+            </div>
+            
+            <div>
+              <label htmlFor="password" className="block text-sm font-medium text-foreground mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg border border-gray-300 dark:border-gray-600 focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-600 focus:border-transparent bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 outline-none transition-all"
+                required
+                placeholder="Enter your password"
               />
             </div>
             
@@ -115,11 +169,20 @@ export default function AuthPage() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                   </svg>
-                  Signing in...
+                  {isRegister ? 'Registering...' : 'Signing in...'}
                 </span>
-              ) : 'Sign In'}
+              ) : (isRegister ? 'Register' : 'Sign In')}
             </motion.button>
           </form>
+          
+          <div className="mt-4 text-center">
+            <button 
+              onClick={() => setIsRegister(!isRegister)} 
+              className="text-blue-600 dark:text-blue-400 hover:underline focus:outline-none text-sm font-medium"
+            >
+              {isRegister ? 'Already have an account? Sign In' : 'Need an account? Register'}
+            </button>
+          </div>
         </motion.div>
       </motion.div>
     </div>

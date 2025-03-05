@@ -7,6 +7,34 @@
   "background_color": "#ffffff",
   "theme_color": "#145199",
   "orientation": "portrait-primary",
+  "scope": "/",
+  "prefer_related_applications": false,
+  "categories": ["business", "productivity", "utilities"],
+  "screenshots": [
+    {
+      "src": "/screenshots/chat-screen.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "platform": "wide",
+      "label": "Chat with Qualia AI"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Start a new chat with Qualia AI",
+      "url": "/chat",
+      "icons": [{ "src": "/icons/chat-icon.svg", "sizes": "192x192" }]
+    },
+    {
+      "name": "Settings",
+      "short_name": "Settings",
+      "description": "Adjust your Qualia AI settings",
+      "url": "/settings",
+      "icons": [{ "src": "/icons/settings-icon.svg", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.svg",

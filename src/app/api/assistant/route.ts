@@ -9,7 +9,7 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, threadId, message, runId } = await request.json();
+    const { action, threadId, message, runId, limit, before } = await request.json();
 
     switch (action) {
       case 'createThread': {
@@ -68,7 +68,12 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        const messages = await getMessages(threadId);
+        // Parse pagination parameters
+        const messagesLimit = limit ? parseInt(limit.toString(), 10) : 20;
+        const beforeId = before ? before.toString() : undefined;
+        
+        // Get messages with pagination
+        const messages = await getMessages(threadId, messagesLimit, beforeId);
         
         // Format the messages for safe JSON serialization (Date objects can't be directly serialized)
         const formattedMessages = messages.map(message => ({
@@ -76,7 +81,10 @@ export async function POST(request: NextRequest) {
           timestamp: message.timestamp instanceof Date ? message.timestamp.toISOString() : new Date().toISOString()
         }));
         
-        return NextResponse.json({ messages: formattedMessages });
+        return NextResponse.json({ 
+          messages: formattedMessages,
+          hasMore: messages.length === messagesLimit
+        });
       }
       
       default:
