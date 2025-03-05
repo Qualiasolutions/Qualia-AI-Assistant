@@ -1,5 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Lead } from '@/types';
+import { Lead, LeadStatus } from '@/types';
+
+// Define a mutable version of the Lead type
+interface MutableLead {
+  companyName: string;
+  industry: string;
+  location: string;
+  email?: string;
+  phone?: string;
+  website?: string;
+  source: string;
+  status: LeadStatus;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export default function useLeads() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -87,9 +101,9 @@ export default function useLeads() {
     }
   }, []);
 
-  // Parse messages for potential leads and extract them
+  // Change the extractLeadsFromMessage function to use MutableLead
   const extractLeadsFromMessage = useCallback((content: string): Partial<Lead>[] => {
-    const leads: Partial<Lead>[] = [];
+    const leads: MutableLead[] = [];
     
     // Try to detect structured lead information in various formats
     // Pattern 1: Headers with Company/Business name, Industry, Location
@@ -149,7 +163,8 @@ export default function useLeads() {
       }
     }
     
-    return leads;
+    // Return the leads as Partial<Lead>[]
+    return leads as Partial<Lead>[];
   }, []);
 
   return {
