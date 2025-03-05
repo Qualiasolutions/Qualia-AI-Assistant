@@ -47,6 +47,103 @@ try {
   console.error('Error initializing leads store:', error);
 }
 
+// Sort leads based on query parameters
+const sortLeads = (leads: Lead[], sortBy: string, sortOrder: 'asc' | 'desc'): Lead[] => {
+  return [...leads].sort((a, b) => {
+    let valueA: string | number = '';
+    let valueB: string | number = '';
+    
+    // Handle different sort fields
+    switch (sortBy) {
+      case 'companyName':
+        valueA = a.companyName.toLowerCase();
+        valueB = b.companyName.toLowerCase();
+        break;
+      case 'industry':
+        valueA = a.industry.toLowerCase();
+        valueB = b.industry.toLowerCase();
+        break;
+      case 'status':
+        valueA = a.status.toLowerCase();
+        valueB = b.status.toLowerCase();
+        break;
+      case 'createdAt':
+        valueA = new Date(a.createdAt).getTime();
+        valueB = new Date(b.createdAt).getTime();
+        break;
+      case 'updatedAt':
+        valueA = new Date(a.updatedAt).getTime();
+        valueB = new Date(b.updatedAt).getTime();
+        break;
+      default:
+        // Default sort by updatedAt
+        valueA = new Date(a.updatedAt).getTime();
+        valueB = new Date(b.updatedAt).getTime();
+    }
+    
+    // Apply sort order
+    if (sortOrder === 'asc') {
+      return valueA > valueB ? 1 : valueA < valueB ? -1 : 0;
+    } else {
+      return valueA < valueB ? 1 : valueA > valueB ? -1 : 0;
+    }
+  });
+};
+
+// Filter leads based on query parameters
+const filterLeads = (leads: Lead[], filters: Record<string, string>): Lead[] => {
+  return leads.filter(lead => {
+    // Check each filter
+    for (const [key, value] of Object.entries(filters)) {
+      if (!value) continue;
+      
+      const filterValue = value.toLowerCase();
+      
+      switch (key) {
+        case 'search':
+          // Search across multiple fields
+          const searchFields = [
+            lead.companyName,
+            lead.industry,
+            lead.location,
+            lead.contactPerson || '',
+            lead.email || '',
+            lead.phone || '',
+            lead.notes || ''
+          ].map(field => field.toLowerCase());
+          
+          // If any field contains the search term, include this lead
+          if (!searchFields.some(field => field.includes(filterValue))) {
+            return false;
+          }
+          break;
+        case 'status':
+          if (lead.status.toLowerCase() !== filterValue) {
+            return false;
+          }
+          break;
+        case 'industry':
+          if (!lead.industry.toLowerCase().includes(filterValue)) {
+            return false;
+          }
+          break;
+        case 'location':
+          if (!lead.location.toLowerCase().includes(filterValue)) {
+            return false;
+          }
+          break;
+        case 'assignedTo':
+          if (!lead.assignedTo || !lead.assignedTo.toLowerCase().includes(filterValue)) {
+            return false;
+          }
+          break;
+      }
+    }
+    
+    return true;
+  });
+};
+
 export async function GET(request: NextRequest) {
   try {
     // Get query parameters
@@ -67,8 +164,52 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ lead });
     }
     
-    // Otherwise, return all leads
-    return NextResponse.json({ leads: leadsStore });
+    // Extract filter parameters
+    const filters: Record<string, string> = {};
+    const search = searchParams.get('search');
+    const status = searchParams.get('status');
+    const industry = searchParams.get('industry');
+    const location = searchParams.get('location');
+    const assignedTo = searchParams.get('assignedTo');
+    
+    if (search) filters.search = search;
+    if (status) filters.status = status;
+    if (industry) filters.industry = industry;
+    if (location) filters.location = location;
+    if (assignedTo) filters.assignedTo = assignedTo;
+    
+    // Extract sort parameters
+    const sortBy = searchParams.get('sortBy') || 'updatedAt';
+    const sortOrder = (searchParams.get('sortOrder') || 'desc') as 'asc' | 'desc';
+    
+    // Extract pagination parameters
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '20', 10);
+    const skip = (page - 1) * limit;
+    
+    // Apply filters
+    let filteredLeads = filterLeads(leadsStore, filters);
+    
+    // Get total count before pagination
+    const totalCount = filteredLeads.length;
+    
+    // Apply sorting
+    filteredLeads = sortLeads(filteredLeads, sortBy, sortOrder);
+    
+    // Apply pagination
+    const paginatedLeads = filteredLeads.slice(skip, skip + limit);
+    
+    // Return leads with pagination metadata
+    return NextResponse.json({
+      leads: paginatedLeads,
+      pagination: {
+        total: totalCount,
+        page,
+        limit,
+        totalPages: Math.ceil(totalCount / limit),
+        hasMore: skip + limit < totalCount
+      }
+    });
   } catch (error) {
     console.error('Error getting leads:', error);
     return NextResponse.json(
@@ -104,8 +245,12 @@ export async function POST(request: NextRequest) {
       source: data.source,
       createdAt: new Date(),
       updatedAt: new Date(),
-      status: 'new',
+      status: data.status || 'new',
       assignedTo: data.assignedTo || undefined,
+      tags: data.tags || [],
+      lastContactDate: data.lastContactDate ? new Date(data.lastContactDate) : undefined,
+      estimatedValue: data.estimatedValue || undefined,
+      priority: data.priority || 'medium'
     };
     
     // Add to store
@@ -151,6 +296,9 @@ export async function PUT(request: NextRequest) {
       ...leadsStore[leadIndex],
       ...data,
       updatedAt: new Date(),
+      // Convert date strings to Date objects
+      createdAt: leadsStore[leadIndex].createdAt,
+      lastContactDate: data.lastContactDate ? new Date(data.lastContactDate) : leadsStore[leadIndex].lastContactDate
     };
     
     // Replace in store

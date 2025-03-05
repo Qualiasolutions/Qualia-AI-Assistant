@@ -29,6 +29,12 @@ export interface VoiceOptions {
   pitch: number; // 0 to 2
   useEnhancedVoices?: boolean;
   voiceId?: string;
+  greekVoice?: {
+    voiceId: string;
+  };
+  englishVoice?: {
+    voiceId: string;
+  };
 }
 
 export type ThemeOption = 'light' | 'dark' | 'system';
@@ -75,6 +81,7 @@ export type AssistantPurpose =
   | 'general_query';
 
 export type LeadStatus = 'new' | 'contacted' | 'qualified' | 'converted' | 'rejected';
+export type LeadPriority = 'low' | 'medium' | 'high';
 
 export interface Lead {
   readonly id: string;
@@ -91,6 +98,10 @@ export interface Lead {
   readonly updatedAt: Date;
   readonly status: LeadStatus;
   readonly assignedTo?: string;
+  readonly tags?: string[];
+  readonly lastContactDate?: Date;
+  readonly estimatedValue?: number;
+  readonly priority?: LeadPriority;
 }
 
 export interface ApiResponse<T> {

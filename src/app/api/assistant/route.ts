@@ -5,29 +5,121 @@ import {
   runAssistant, 
   getRunStatus, 
   getMessages 
-} from '@/lib/openai';
+} from '@/lib/mistral';
 
 // Build-time check to help deployment succeed even without env vars
 export const dynamic = 'force-dynamic';
 
+// Cache for recent messages to improve response time
+type MessageCache = {
+  threadId: string;
+  messages: Record<string, unknown>[];
+  timestamp: number;
+};
+
+const messageCache = new Map<string, MessageCache>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+const CACHE_MAX_SIZE = 10;
+
+// System prompts that define assistant behavior based on language
+const systemPrompts = {
+  en: `You are Qualia AI, a helpful and professional business assistant designed to help with business tasks, lead generation, customer support, and market research. 
+      Always respond in a clear, concise, and professional manner. 
+      When you don't know something, acknowledge it and suggest alternatives or offer to research it further.
+      For any business analysis, make sure to provide balanced perspectives and consider multiple viewpoints.`,
+  
+  el: `Είσαι το Qualia AI, ένας χρήσιμος και επαγγελματικός επιχειρηματικός βοηθός σχεδιασμένος να βοηθά με επιχειρηματικές εργασίες, δημιουργία leads, υποστήριξη πελατών και έρευνα αγοράς. 
+      Πάντα να απαντάς με σαφή, συνοπτικό και επαγγελματικό τρόπο. 
+      Όταν δεν γνωρίζεις κάτι, αναγνώρισέ το και πρότεινε εναλλακτικές ή προσφέρσου να το ερευνήσεις περαιτέρω.
+      Για οποιαδήποτε επιχειρηματική ανάλυση, φρόντισε να παρέχεις ισορροπημένες προοπτικές και να λαμβάνεις υπόψη πολλαπλές απόψεις.`
+};
+
+/**
+ * Manage cache size by removing the oldest entries when the max size is reached
+ */
+function manageCacheSize(): void {
+  if (messageCache.size >= CACHE_MAX_SIZE) {
+    let oldestKey = '';
+    let oldestTime = Date.now();
+    
+    // Find the oldest entry
+    for (const [key, data] of messageCache.entries()) {
+      if (data.timestamp < oldestTime) {
+        oldestTime = data.timestamp;
+        oldestKey = key;
+      }
+    }
+    
+    // Remove the oldest entry
+    if (oldestKey) {
+      messageCache.delete(oldestKey);
+    }
+  }
+}
+
+/**
+ * Clean expired cache entries
+ */
+function cleanExpiredCache(): void {
+  const now = Date.now();
+  for (const [key, data] of messageCache.entries()) {
+    if (now - data.timestamp > CACHE_TTL) {
+      messageCache.delete(key);
+    }
+  }
+}
+
+// Clean cache periodically
+setInterval(cleanExpiredCache, 60 * 1000); // Clean every minute
+
+// First, let's enhance the mistral addMessageToThread function to support roles
+async function enhancedAddMessageToThread(threadId: string, content: string, role: 'user' | 'system' = 'user'): Promise<void> {
+  // In the future, if the API supports roles directly, this can be updated
+  // For now, we'll add a prefix for system messages
+  let processedContent = content;
+  
+  if (role === 'system') {
+    processedContent = `[SYSTEM INSTRUCTIONS]: ${content}`;
+  }
+  
+  await addMessageToThread(threadId, processedContent);
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Check for environment variables at runtime
-    if (!process.env.OPENAI_API_KEY || !process.env.ASSISTANT_ID) {
+    if (!process.env.MISTRAL_API_KEY) {
       return NextResponse.json(
         { 
-          error: 'OpenAI configuration missing', 
-          details: 'Please set OPENAI_API_KEY and ASSISTANT_ID environment variables in the Vercel dashboard.' 
+          error: 'Mistral AI configuration missing', 
+          details: 'Please set MISTRAL_API_KEY environment variable in the Vercel dashboard.' 
         },
         { status: 503 }
       );
     }
     
-    const { action, threadId, message, runId, limit, before } = await request.json();
+    const { action, threadId, message, runId, limit, before, language = 'en' } = await request.json();
+    
+    // Select the appropriate system prompt based on language
+    const systemPrompt = language === 'el' ? systemPrompts.el : systemPrompts.en;
 
     switch (action) {
       case 'createThread': {
         const newThreadId = await createThread();
+        
+        // Add welcome message if creating a new thread
+        if (message) {
+          try {
+            await enhancedAddMessageToThread(newThreadId, message, 'user');
+            // Add system prompt to guide the assistant behavior
+            await enhancedAddMessageToThread(newThreadId, systemPrompt, 'system');
+            await runAssistant(newThreadId);
+          } catch (error) {
+            console.error('Error during thread initialization:', error);
+            // Continue despite error to return the thread ID
+          }
+        }
+        
         return NextResponse.json({ threadId: newThreadId });
       }
       
@@ -36,9 +128,12 @@ export async function POST(request: NextRequest) {
         // This is used to recover from stuck states
         const newThreadId = await createThread();
         
+        // Add system prompt to guide the assistant behavior
+        await enhancedAddMessageToThread(newThreadId, systemPrompt, 'system');
+        
         // If there's a welcome message, add it to the thread
         if (message) {
-          await addMessageToThread(newThreadId, message);
+          await enhancedAddMessageToThread(newThreadId, message, 'user');
           await runAssistant(newThreadId);
         }
         
@@ -57,8 +152,11 @@ export async function POST(request: NextRequest) {
         }
         
         try {
-          await addMessageToThread(threadId, message);
+          await enhancedAddMessageToThread(threadId, message, 'user');
           const newRunId = await runAssistant(threadId);
+          
+          // Clear cache for this thread as it's now outdated
+          messageCache.delete(threadId);
           
           return NextResponse.json({ runId: newRunId });
         } catch (error) {
@@ -71,9 +169,15 @@ export async function POST(request: NextRequest) {
           if (error instanceof Error) {
             errorMessage = error.message;
             
-            // If this is a "message still being processed" error, use a 429 (too many requests) status
+            // If this is a "message still being processed" error, use a 429 status
             if (error.message.includes('message is still being processed')) {
               statusCode = 429;
+            }
+            
+            // If thread not found, suggest creating a new thread
+            if (error.message.includes('not found') || error.message.includes('Thread not found')) {
+              errorMessage = 'Thread not found. Please create a new conversation.';
+              statusCode = 404;
             }
           }
           
@@ -108,19 +212,62 @@ export async function POST(request: NextRequest) {
         const messagesLimit = limit ? parseInt(limit.toString(), 10) : 20;
         const beforeId = before ? before.toString() : undefined;
         
-        // Get messages with pagination
-        const messages = await getMessages(threadId, messagesLimit, beforeId);
+        // Check cache first if not paginating
+        if (!beforeId && messageCache.has(threadId)) {
+          const cachedData = messageCache.get(threadId)!;
+          const now = Date.now();
+          
+          // Return cached data if it's fresh
+          if (now - cachedData.timestamp < CACHE_TTL) {
+            console.log('Using cached messages');
+            return NextResponse.json({ 
+              messages: cachedData.messages,
+              hasMore: cachedData.messages.length === messagesLimit,
+              fromCache: true
+            });
+          }
+        }
         
-        // Format the messages for safe JSON serialization (Date objects can't be directly serialized)
-        const formattedMessages = messages.map(message => ({
-          ...message,
-          timestamp: message.timestamp instanceof Date ? message.timestamp.toISOString() : new Date().toISOString()
-        }));
-        
-        return NextResponse.json({ 
-          messages: formattedMessages,
-          hasMore: messages.length === messagesLimit
-        });
+        try {
+          // Get messages with pagination
+          const messages = await getMessages(threadId, messagesLimit, beforeId);
+          
+          // Format the messages for safe JSON serialization
+          const formattedMessages = messages.map(message => ({
+            ...message,
+            timestamp: message.timestamp instanceof Date ? message.timestamp.toISOString() : new Date().toISOString()
+          }));
+          
+          // Cache the messages if not paginating
+          if (!beforeId) {
+            manageCacheSize();
+            messageCache.set(threadId, {
+              threadId,
+              messages: formattedMessages,
+              timestamp: Date.now()
+            });
+          }
+          
+          return NextResponse.json({ 
+            messages: formattedMessages,
+            hasMore: messages.length === messagesLimit
+          });
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+          
+          let statusCode = 500;
+          let errorMessage = 'Failed to fetch messages';
+          
+          if (error instanceof Error) {
+            // Thread not found
+            if (error.message.includes('not found') || error.message.includes('Thread not found')) {
+              statusCode = 404;
+              errorMessage = 'Thread not found. Please create a new conversation.';
+            }
+          }
+          
+          return NextResponse.json({ error: errorMessage }, { status: statusCode });
+        }
       }
       
       default:
