@@ -1,8 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { FiSend, FiLoader } from 'react-icons/fi';
-import VoiceRecordButton from '@/components/voice/VoiceRecordButton';
+import { FiSend, FiLoader, FiCommand } from 'react-icons/fi';
 
 interface ChatInputProps {
   onSendMessage: (message: string) => void;
@@ -50,16 +49,6 @@ export default function ChatInput({
     }
   };
 
-  const handleVoiceResult = (transcript: string) => {
-    setMessage(transcript);
-    // Announce voice transcription to screen readers
-    announceToScreenReader(
-      language === 'el' 
-        ? 'Φωνητική εισαγωγή: ' + transcript 
-        : 'Voice input: ' + transcript
-    );
-  };
-
   // Function to announce messages to screen readers
   const announceToScreenReader = (message: string) => {
     const announcement = document.createElement('div');
@@ -77,7 +66,7 @@ export default function ChatInput({
 
   return (
     <div 
-      className="border-t border-gray-200 dark:border-gray-700 bg-card p-4 sticky bottom-0 backdrop-blur-md bg-white/80 dark:bg-gray-900/80"
+      className="sticky bottom-0 backdrop-blur-md z-10"
       role="region"
       aria-label={language === 'el' ? 'Περιοχή εισαγωγής μηνύματος' : 'Message input area'}
     >
@@ -87,12 +76,14 @@ export default function ChatInput({
             e.preventDefault();
             handleSendMessage();
           }}
-          className="flex items-end space-x-2 relative rounded-2xl border border-gray-200 dark:border-gray-700 shadow-sm p-1 bg-white dark:bg-gray-800"
+          className="flex items-end space-x-2 relative rounded-2xl border border-gray-200/60 dark:border-gray-700/60 shadow-lg p-2 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm"
         >
-          <label htmlFor="message-input" className="sr-only">
-            {language === 'el' ? 'Γράψτε το μήνυμά σας' : 'Type your message'}
-          </label>
-          <div className="flex-grow relative">
+          <div className="absolute bottom-4 left-4 text-xs text-gray-400 dark:text-gray-500 flex items-center">
+            <FiCommand className="w-3 h-3 mr-1" />
+            <span>Enter to send</span>
+          </div>
+          
+          <div className="flex-grow relative mt-6">
             <textarea
               id="message-input"
               ref={inputRef}
@@ -100,7 +91,7 @@ export default function ChatInput({
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder={language === 'el' ? 'Γράψτε το μήνυμά σας...' : 'Type your message...'}
-              className="w-full min-h-[45px] max-h-[150px] py-2 px-3 resize-none bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500 rounded-lg text-gray-800 dark:text-gray-200"
+              className="w-full min-h-[45px] max-h-[150px] py-3 px-3 resize-none bg-transparent focus:outline-none focus:ring-2 focus:ring-blue-500/40 rounded-xl text-gray-800 dark:text-gray-200 border-0"
               disabled={isLoading}
               aria-disabled={isLoading}
               aria-multiline="true"
@@ -109,7 +100,7 @@ export default function ChatInput({
             />
             {isLoading && (
               <div 
-                className="absolute right-2 top-2 flex items-center justify-center text-gray-400"
+                className="absolute right-3 bottom-3 flex items-center justify-center text-gray-400"
                 aria-hidden="true"
               >
                 <FiLoader className="animate-spin w-4 h-4" />
@@ -117,22 +108,16 @@ export default function ChatInput({
             )}
           </div>
           
-          <div className="flex items-center space-x-1">
-            <VoiceRecordButton
-              language={language}
-              onResult={handleVoiceResult}
-              disabled={isLoading}
-            />
-            
+          <div className="flex items-center pb-2 pr-1">
             <button
               ref={sendButtonRef}
               type="submit"
               onClick={handleSendMessage}
               disabled={!message.trim() || isLoading}
-              className={`p-3 rounded-full transition-all duration-200 ${
+              className={`p-3.5 rounded-xl transition-all duration-300 ${
                 !message.trim() || isLoading
                   ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-700 dark:text-gray-500'
-                  : 'bg-gradient-to-r from-[#145199] to-[#1a62b3] text-white hover:shadow-md hover:from-[#0e3b70] hover:to-[#145199]'
+                  : 'bg-gradient-to-r from-blue-500 to-indigo-600 text-white hover:shadow-md hover:shadow-blue-500/20 hover:from-blue-600 hover:to-indigo-700'
               }`}
               aria-label={language === 'el' ? 'Αποστολή μηνύματος' : 'Send message'}
               aria-disabled={!message.trim() || isLoading}

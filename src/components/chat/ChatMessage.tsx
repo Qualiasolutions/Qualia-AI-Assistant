@@ -4,7 +4,7 @@ import { useEffect, useRef, useMemo } from 'react';
 import { Message } from '@/types';
 import { speakText } from '@/lib/voice';
 import { motion } from 'framer-motion';
-import { FiUser, FiMessageSquare } from 'react-icons/fi';
+import { FiUser, FiMessageSquare, FiCpu } from 'react-icons/fi';
 
 interface ChatMessageProps {
   message: Message;
@@ -93,7 +93,7 @@ export default function ChatMessage({
 
   return (
     <motion.div
-      className={`w-full mb-5 ${isUser ? 'flex justify-end' : 'flex justify-start'}`}
+      className={`w-full mb-6 ${isUser ? 'flex justify-end' : 'flex justify-start'}`}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
@@ -101,15 +101,15 @@ export default function ChatMessage({
       aria-label={isUser ? ariaLabels.user : isSystem ? ariaLabels.system : ariaLabels.assistant}
     >
       <div 
-        className={`flex max-w-[80%] md:max-w-[70%]`}
+        className={`flex max-w-[85%] md:max-w-[75%]`}
         tabIndex={0}
       >
         {!isUser && !isSystem && (
           <div 
-            className="flex-shrink-0 h-9 w-9 bg-gradient-to-br from-[#145199] to-[#0a2d5c] rounded-full flex items-center justify-center text-white mr-2 shadow-md"
+            className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-[#0077ff] to-[#00c2ff] rounded-xl flex items-center justify-center text-white mr-3 shadow-lg backdrop-blur-sm"
             aria-hidden="true"
           >
-            <FiMessageSquare className="w-4 h-4" />
+            <FiCpu className="w-5 h-5" />
           </div>
         )}
         
@@ -117,13 +117,15 @@ export default function ChatMessage({
           <div 
             ref={contentRef}
             className={`
-              py-3 px-4 rounded-2xl shadow-sm
+              py-4 px-5 rounded-2xl shadow-md backdrop-blur-sm
               ${isSystem 
-                ? 'bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800/50 text-yellow-800 dark:text-yellow-200'
+                ? 'bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/50 dark:border-amber-700/30 text-amber-800 dark:text-amber-200'
                 : isUser 
-                  ? 'bg-gradient-to-r from-[#145199] to-[#1a62b3] text-white' 
-                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                  ? 'bg-gradient-to-r from-[#145199] to-[#1a62b3] text-white border border-blue-400/20 dark:border-blue-500/20' 
+                  : 'bg-white/90 dark:bg-gray-800/90 border border-gray-200/50 dark:border-gray-700/50'
               }
+              ${isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'}
+              ${isSystem ? 'ring-2 ring-amber-200/20 dark:ring-amber-700/20' : ''}
             `}
             aria-live={isUser ? 'off' : 'polite'}
           >
@@ -133,7 +135,7 @@ export default function ChatMessage({
           </div>
           
           <div 
-            className={`text-xs mt-1 text-gray-500 flex items-center ${isUser ? 'justify-end' : 'justify-start'}`}
+            className={`text-xs mt-1.5 text-gray-500 flex items-center ${isUser ? 'justify-end mr-1' : 'justify-start ml-1'}`}
             aria-label={`${ariaLabels.sentAt} ${formattedTime}`}
           >
             <span className="opacity-70">{formattedTime}</span>
@@ -142,10 +144,10 @@ export default function ChatMessage({
         
         {isUser && (
           <div 
-            className="flex-shrink-0 h-9 w-9 bg-gradient-to-br from-gray-300 to-gray-400 dark:from-gray-600 dark:to-gray-700 rounded-full flex items-center justify-center ml-2 shadow-md"
+            className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-indigo-400 to-blue-500 dark:from-indigo-500 dark:to-blue-600 rounded-xl flex items-center justify-center ml-3 shadow-lg backdrop-blur-sm"
             aria-hidden="true"
           >
-            <FiUser className="w-4 h-4 text-gray-700 dark:text-gray-300" />
+            <FiUser className="w-5 h-5 text-white" />
           </div>
         )}
       </div>
