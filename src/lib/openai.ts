@@ -57,6 +57,28 @@ export async function createThread() {
 export async function addMessageToThread(threadId: string, content: string) {
   try {
     const { client } = getOpenAIClient();
+    
+    // Check if there are any active runs on this thread
+    const runs = await client.beta.threads.runs.list(threadId, { limit: 1 });
+    
+    // If there's an active run, cancel it before proceeding
+    if (runs.data.length > 0) {
+      const activeRun = runs.data[0];
+      if (['in_progress', 'queued', 'requires_action'].includes(activeRun.status)) {
+        try {
+          // Attempt to cancel the run
+          await client.beta.threads.runs.cancel(threadId, activeRun.id);
+          // Small delay to ensure cancellation is processed
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (cancelError) {
+          console.warn('Could not cancel existing run, might need to wait:', cancelError);
+          // If we can't cancel, throw an error that will be caught by our UI
+          throw new Error('A message is still being processed. Please wait a moment before sending another.');
+        }
+      }
+    }
+    
+    // Now safe to add the message
     await client.beta.threads.messages.create(threadId, {
       role: 'user',
       content,

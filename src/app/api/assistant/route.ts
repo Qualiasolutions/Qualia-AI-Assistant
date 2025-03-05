@@ -56,10 +56,32 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        await addMessageToThread(threadId, message);
-        const newRunId = await runAssistant(threadId);
-        
-        return NextResponse.json({ runId: newRunId });
+        try {
+          await addMessageToThread(threadId, message);
+          const newRunId = await runAssistant(threadId);
+          
+          return NextResponse.json({ runId: newRunId });
+        } catch (error) {
+          console.error('Error in sendMessage:', error);
+          
+          // Extract meaningful error message
+          let errorMessage = 'An error occurred while processing your request';
+          let statusCode = 500;
+          
+          if (error instanceof Error) {
+            errorMessage = error.message;
+            
+            // If this is a "message still being processed" error, use a 429 (too many requests) status
+            if (error.message.includes('message is still being processed')) {
+              statusCode = 429;
+            }
+          }
+          
+          return NextResponse.json(
+            { error: errorMessage },
+            { status: statusCode }
+          );
+        }
       }
       
       case 'getRunStatus': {

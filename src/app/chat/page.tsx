@@ -5,19 +5,20 @@ import { useRouter } from 'next/navigation';
 import Header from '@/components/ui/Header';
 import ChatInput from '@/components/chat/ChatInput';
 import ChatMessage from '@/components/chat/ChatMessage';
-import VoiceChat from '@/components/chat/VoiceChat';
 import { stopSpeaking } from '@/lib/voice';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiPlus, FiRefreshCw } from 'react-icons/fi';
 import { Message } from '@/types';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
+import DataSidebar from '@/components/ui/DataSidebar';
 
 export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, sendMessage, resetThread, setMessages, forceReset } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [showSidebar, setShowSidebar] = useState(true);
 
   // Add welcome message if no messages exist
   useEffect(() => {
@@ -52,7 +53,7 @@ export default function ChatPage() {
     resetThread();
   };
 
-  const handleSendMessage = (text: string) => {
+  const handleSendMessage = async (text: string) => {
     // Create and immediately add the user message to UI
     const userMessage: Message = {
       id: `user-${Date.now()}`,
@@ -64,8 +65,33 @@ export default function ChatPage() {
     // Add message to the chat immediately
     setMessages(prev => [...prev, userMessage]);
     
-    // Then send to API
-    sendMessage(text);
+    try {
+      // Then send to API
+      await sendMessage(text);
+    } catch (error) {
+      console.error("Error sending message:", error);
+      
+      // Extract error message if available
+      let errorMessage = 'Sorry, there was an error processing your message. Please try again.';
+      if (error instanceof Error) {
+        if (error.message.includes('message is still being processed')) {
+          errorMessage = 'Please wait while your previous message is being processed.';
+        }
+      }
+      
+      // Add error message to chat
+      const errorSystemMessage: Message = {
+        id: `error-${Date.now()}`,
+        role: 'system',
+        content: errorMessage,
+        timestamp: new Date(),
+      };
+      setMessages(prev => [...prev, errorSystemMessage]);
+    }
+  };
+
+  const toggleSidebar = () => {
+    setShowSidebar(!showSidebar);
   };
 
   return (
@@ -75,15 +101,22 @@ export default function ChatPage() {
         voiceEnabled={settings.voice.enabled}
         onLanguageChange={setLanguage}
         onVoiceToggle={toggleVoice}
-        onSettingsClick={() => {}}
+        onSettingsClick={toggleSidebar}
         username={"Guest"}
       />
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Main Chat Area - Full width */}
+        {/* Leads Sidebar */}
+        {showSidebar && (
+          <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto hidden md:block">
+            <DataSidebar />
+          </div>
+        )}
+
+        {/* Main Chat Area */}
         <div className="flex-1 flex flex-col w-full">
           <div className="flex-1 overflow-y-auto px-4 py-4 md:px-8">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-3xl mx-auto">
               {/* New Chat Button - Centered at top */}
               <div className="mb-6 flex justify-center">
                 <motion.button
@@ -97,7 +130,7 @@ export default function ChatPage() {
                 </motion.button>
               </div>
               
-              {/* Messages */}
+              {/* Messages - Perplexity-style floating chat */}
               <div className="space-y-4">
                 <AnimatePresence mode="popLayout">
                   {messages.map((message) => (
@@ -107,6 +140,11 @@ export default function ChatPage() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.2 }}
+                      className={`rounded-xl shadow-md ${
+                        message.role === 'user' 
+                          ? 'bg-blue-50 dark:bg-blue-900/20 ml-auto max-w-[85%]' 
+                          : 'bg-white dark:bg-gray-800 mr-auto max-w-[85%]'
+                      }`}
                     >
                       <ChatMessage 
                         message={message} 
@@ -121,7 +159,7 @@ export default function ChatPage() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex items-center space-x-2 p-4 text-gray-500"
+                    className="flex items-center space-x-2 p-4 text-gray-500 bg-white dark:bg-gray-800 rounded-xl shadow-md max-w-[85%] mr-auto"
                   >
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
                     <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
@@ -134,22 +172,14 @@ export default function ChatPage() {
             </div>
           </div>
 
-          {/* Input area with chat input and voice chat */}
+          {/* Input area with chat input only */}
           <div className="p-3 md:p-4 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 rounded-lg shadow-lg">
-            <div className="max-w-4xl mx-auto">
+            <div className="max-w-3xl mx-auto">
               <ChatInput 
                 onSendMessage={handleSendMessage}
                 isLoading={isLoading}
                 language={settings.language || 'en'}
               />
-              <div className="mt-2">
-                <VoiceChat
-                  voiceOptions={settings.voice}
-                  language={settings.language || 'en'}
-                  onSpeechResult={handleSendMessage}
-                  isProcessing={isLoading}
-                />
-              </div>
             </div>
           </div>
         </div>
