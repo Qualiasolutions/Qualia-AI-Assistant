@@ -7,8 +7,22 @@ import {
   getMessages 
 } from '@/lib/openai';
 
+// Build-time check to help deployment succeed even without env vars
+export const dynamic = 'force-dynamic';
+
 export async function POST(request: NextRequest) {
   try {
+    // Check for environment variables at runtime
+    if (!process.env.OPENAI_API_KEY || !process.env.ASSISTANT_ID) {
+      return NextResponse.json(
+        { 
+          error: 'OpenAI configuration missing', 
+          details: 'Please set OPENAI_API_KEY and ASSISTANT_ID environment variables in the Vercel dashboard.' 
+        },
+        { status: 503 }
+      );
+    }
+    
     const { action, threadId, message, runId, limit, before } = await request.json();
 
     switch (action) {

@@ -8,19 +8,38 @@ const getOpenAIClient = () => {
   const assistantId = process.env.ASSISTANT_ID;
 
   if (!apiKey) {
-    console.error('OPENAI_API_KEY environment variable is not set. Please configure it in environment variables.');
-    throw new Error('Missing OpenAI API key');
+    console.error('OPENAI_API_KEY environment variable is not set. Please configure it in the Vercel dashboard or .env.local file.');
+    throw new Error('Missing OpenAI API key. Please add this to your environment variables in the Vercel dashboard.');
   }
 
   if (!assistantId) {
-    console.error('ASSISTANT_ID environment variable is not set. Please configure it in environment variables.');
-    throw new Error('Missing OpenAI Assistant ID');
+    console.error('ASSISTANT_ID environment variable is not set. Please configure it in the Vercel dashboard or .env.local file.');
+    throw new Error('Missing OpenAI Assistant ID. Please add this to your environment variables in the Vercel dashboard.');
   }
 
   return {
     client: new OpenAI({ apiKey }),
     assistantId
   };
+};
+
+// Handle missing environment variables gracefully for API routes
+// This prevents build failures during static analysis
+const safeGetOpenAIClient = () => {
+  try {
+    return getOpenAIClient();
+  } catch (error) {
+    // During build time, return a mock client
+    if (process.env.NODE_ENV === 'production' && !process.env.OPENAI_API_KEY) {
+      console.warn('Building without OpenAI credentials. API functionality will not work until environment variables are set.');
+      // Return a placeholder that won't be used in the actual build
+      return {
+        client: {} as OpenAI,
+        assistantId: 'placeholder-during-build'
+      };
+    }
+    throw error;
+  }
 };
 
 // These functions will now be called via API routes, not directly from the client
@@ -102,4 +121,12 @@ export async function getMessages(threadId: string, limit = 20, before?: string)
   }
 }
 
-export default getOpenAIClient().client; 
+// Export without throwing errors during build
+export default (() => {
+  try {
+    return getOpenAIClient().client;
+  } catch (error) {
+    console.warn('OpenAI client initialization skipped during build.');
+    return {} as OpenAI;
+  }
+})(); 
