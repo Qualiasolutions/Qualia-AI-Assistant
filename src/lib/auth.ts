@@ -63,7 +63,7 @@ export function verifyToken(token: string): User | null {
   try {
     const decoded = verify(token, JWT_SECRET) as { username: string; isAdmin: boolean };
     return { username: decoded.username, isAdmin: decoded.isAdmin };
-  } catch (_error) {
+  } catch {
     return null;
   }
 }

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export async function POST(_request: NextRequest) {
+export async function POST() {
   try {
     // Since we're using JWT, we'll just clear the token cookie
     // The actual invalidation of the token would be handled server-side

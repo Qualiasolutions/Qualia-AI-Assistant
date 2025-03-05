@@ -18,7 +18,7 @@ jest.mock('jsonwebtoken', () => ({
 // Mock bcrypt
 jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('hashed-password'),
-  compare: jest.fn().mockImplementation(async (password, hash) => {
+  compare: jest.fn().mockImplementation(async (password, hashedValue) => {
     // For testing, we'll consider 'correct-password' as the valid password
     return password === 'correct-password';
   })

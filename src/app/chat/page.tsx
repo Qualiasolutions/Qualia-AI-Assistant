@@ -25,7 +25,6 @@ export default function ChatPage() {
   const { extractLeadsFromMessage, createLead } = useLeads();
   const { search } = useSearch();
   const [showInfo, setShowInfo] = useState(false);
-  const [showSearch, setShowSearch] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const processedMessagesRef = useRef<Set<string>>(new Set());
   const [user, setUser] = useState<{ username: string; isAdmin: boolean } | null>(null);
@@ -135,7 +134,6 @@ export default function ChatPage() {
     stopSpeaking();
     resetThread();
     setShowInfo(false);
-    setShowSearch(false);
   };
   
   const handleForceReset = () => {
