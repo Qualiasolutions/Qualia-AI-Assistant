@@ -1,6 +1,5 @@
 import { registerUser, authenticateUser, verifyToken, validateSession, isAdmin } from './auth';
 import { sign } from 'jsonwebtoken';
-import { hash } from 'bcrypt';
 
 // Mock jsonwebtoken
 jest.mock('jsonwebtoken', () => ({

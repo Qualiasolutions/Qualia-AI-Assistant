@@ -235,11 +235,45 @@ export default function useChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentRunId, setCurrentRunId] = useState<string | null>(null);
+  const [, setCurrentRunId] = useState<string | null>(null);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [isOnline, setIsOnline] = useState(typeof navigator !== 'undefined' ? navigator.onLine : true);
   const [isProcessingQueue, setIsProcessingQueue] = useState(false);
+
+  // Process offline queue when coming back online
+  const processOfflineQueue = useCallback(async () => {
+    if (isProcessingQueue || !isOnline) return;
+    
+    setIsProcessingQueue(true);
+    try {
+      await apiClient.processOfflineQueue();
+    } catch (error) {
+      console.error('Error processing offline queue:', error);
+    } finally {
+      setIsProcessingQueue(false);
+    }
+  }, [isProcessingQueue, isOnline]);
+
+  // Monitor online status
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOnline(true);
+      processOfflineQueue();
+    };
+    
+    const handleOffline = () => {
+      setIsOnline(false);
+    };
+    
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, [processOfflineQueue]);
 
   // Initialize chat thread with retry
   useEffect(() => {
@@ -307,40 +341,6 @@ export default function useChat() {
       console.error('Error loading more messages:', err);
     } finally {
       setIsLoadingMore(false);
-    }
-  };
-
-  // Monitor online status
-  useEffect(() => {
-    const handleOnline = () => {
-      setIsOnline(true);
-      processOfflineQueue();
-    };
-    
-    const handleOffline = () => {
-      setIsOnline(false);
-    };
-    
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
-  
-  // Process offline queue when coming back online
-  const processOfflineQueue = async () => {
-    if (isProcessingQueue || !isOnline) return;
-    
-    setIsProcessingQueue(true);
-    try {
-      await apiClient.processOfflineQueue();
-    } catch (error) {
-      console.error('Error processing offline queue:', error);
-    } finally {
-      setIsProcessingQueue(false);
     }
   };
 

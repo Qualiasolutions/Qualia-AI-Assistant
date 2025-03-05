@@ -271,16 +271,6 @@ export default function ChatPage() {
     }
   };
 
-  const toggleSearch = () => {
-    setShowSearch(!showSearch);
-    setShowInfo(false);
-  };
-
-  const toggleInfo = () => {
-    setShowInfo(!showInfo);
-    setShowSearch(false);
-  };
-
   return (
     <div className="flex flex-col h-screen bg-gradient-to-b from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
       <Header
