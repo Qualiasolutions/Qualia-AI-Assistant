@@ -93,12 +93,11 @@ export default function ChatMessage({
 
   return (
     <motion.div
-      className={`w-full mb-6 ${isUser ? 'flex justify-end' : 'flex justify-start'}`}
-      initial={{ opacity: 0, y: 10 }}
+      initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3 }}
-      role="listitem"
-      aria-label={isUser ? ariaLabels.user : isSystem ? ariaLabels.system : ariaLabels.assistant}
+      exit={{ opacity: 0, scale: 0.95 }}
+      transition={{ duration: 0.2 }}
+      className={`flex ${isUser ? 'justify-end' : 'justify-start'} my-3`}
     >
       <div 
         className={`flex max-w-[85%] md:max-w-[75%]`}
@@ -106,10 +105,10 @@ export default function ChatMessage({
       >
         {!isUser && !isSystem && (
           <div 
-            className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-[#0077ff] to-[#00c2ff] rounded-xl flex items-center justify-center text-white mr-3 shadow-lg backdrop-blur-sm"
+            className="flex-shrink-0 h-8 w-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded flex items-center justify-center text-white mr-3 shadow-sm"
             aria-hidden="true"
           >
-            <FiCpu className="w-5 h-5" />
+            <FiCpu className="w-4 h-4" />
           </div>
         )}
         
@@ -117,15 +116,13 @@ export default function ChatMessage({
           <div 
             ref={contentRef}
             className={`
-              py-4 px-5 rounded-2xl shadow-md backdrop-blur-sm
+              py-3 px-4 rounded shadow-sm
               ${isSystem 
-                ? 'bg-amber-50/80 dark:bg-amber-900/30 border border-amber-200/50 dark:border-amber-700/30 text-amber-800 dark:text-amber-200'
+                ? 'bg-amber-50 dark:bg-amber-900/40 border-l-4 border-amber-400 dark:border-amber-600 text-amber-800 dark:text-amber-200'
                 : isUser 
-                  ? 'bg-gradient-to-r from-[#145199] to-[#1a62b3] text-white border border-blue-400/20 dark:border-blue-500/20' 
-                  : 'bg-white/90 dark:bg-gray-800/90 border border-gray-200/50 dark:border-gray-700/50'
+                  ? 'bg-gradient-to-r from-blue-600 to-indigo-700 text-white' 
+                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
               }
-              ${isUser ? 'rounded-tr-sm' : 'rounded-tl-sm'}
-              ${isSystem ? 'ring-2 ring-amber-200/20 dark:ring-amber-700/20' : ''}
             `}
             aria-live={isUser ? 'off' : 'polite'}
           >
@@ -135,7 +132,7 @@ export default function ChatMessage({
           </div>
           
           <div 
-            className={`text-xs mt-1.5 text-gray-500 flex items-center ${isUser ? 'justify-end mr-1' : 'justify-start ml-1'}`}
+            className={`text-xs mt-1 text-gray-500 flex items-center ${isUser ? 'justify-end mr-1' : 'justify-start ml-1'}`}
             aria-label={`${ariaLabels.sentAt} ${formattedTime}`}
           >
             <span className="opacity-70">{formattedTime}</span>
@@ -144,13 +141,13 @@ export default function ChatMessage({
         
         {isUser && (
           <div 
-            className="flex-shrink-0 h-10 w-10 bg-gradient-to-br from-indigo-400 to-blue-500 dark:from-indigo-500 dark:to-blue-600 rounded-xl flex items-center justify-center ml-3 shadow-lg backdrop-blur-sm"
+            className="flex-shrink-0 h-8 w-8 bg-gradient-to-r from-blue-600 to-indigo-700 rounded flex items-center justify-center ml-3 shadow-sm"
             aria-hidden="true"
           >
-            <FiUser className="w-5 h-5 text-white" />
+            <FiUser className="w-4 h-4 text-white" />
           </div>
         )}
       </div>
     </motion.div>
   );
-} 
+}

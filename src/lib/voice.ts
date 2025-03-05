@@ -1,14 +1,23 @@
 import { VoiceOptions } from '@/types';
 
+// Track the current enhanced TTS audio source for cancellation
+let enhancedTTSSource: AudioBufferSourceNode | null = null;
+
 // Default voice settings
 export const defaultVoiceOptions: VoiceOptions = {
   enabled: true,
-  language: 'el',
+  language: 'en',
   volume: 1.0,
   rate: 1.0,
   pitch: 1.0,
   useEnhancedVoices: true,  // New option to use enhanced voices
-  voiceId: 'default'        // New option for specific voice selection
+  voiceId: 'default',        // New option for specific voice selection
+  greekVoice: {
+    voiceId: 'el-GR'
+  },
+  englishVoice: {
+    voiceId: 'en-US'
+  }
 };
 
 // Voice options for enhanced TTS (Azure Cognitive Services)
@@ -88,15 +97,14 @@ export function speakWithBrowserTTS(text: string, options: VoiceOptions): void {
 export async function speakWithEnhancedTTS(text: string, options: VoiceOptions): Promise<void> {
   if (typeof window === 'undefined' || !options.enabled) return;
   
+  // Cancel any ongoing speech
+  stopSpeaking();
+  
+  // Choose the appropriate voice based on language
+  const voiceOptions = options.language === 'el' ? options.greekVoice : options.englishVoice;
+  const voiceId = voiceOptions?.voiceId || (options.language === 'el' ? 'el-GR' : 'en-US');
+  
   try {
-    // Get the voice ID (default to first voice if not specified)
-    const voiceId = options.voiceId && options.voiceId !== 'default' 
-      ? options.voiceId 
-      : options.language === 'el' 
-        ? enhancedVoiceOptions.el[0].id 
-        : enhancedVoiceOptions.en[0].id;
-        
-    // Call Azure Speech Services API
     const response = await fetch('/api/text-to-speech', {
       method: 'POST',
       headers: {
@@ -111,6 +119,15 @@ export async function speakWithEnhancedTTS(text: string, options: VoiceOptions):
     });
     
     if (!response.ok) {
+      // Check if response contains JSON with fallback instruction
+      if (response.headers.get('Content-Type')?.includes('application/json')) {
+        const jsonResponse = await response.json();
+        if (jsonResponse.fallbackToBrowser) {
+          console.warn('TTS API suggested browser fallback:', jsonResponse.message);
+          speakWithBrowserTTS(text, options);
+          return;
+        }
+      }
       throw new Error(`Failed to get speech: ${response.statusText}`);
     }
     
@@ -138,14 +155,21 @@ export async function speakWithEnhancedTTS(text: string, options: VoiceOptions):
     source.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
+    // Store the source in the global scope for potential cancellation
+    enhancedTTSSource = source;
+    
     source.start(0);
     
     return new Promise((resolve) => {
-      source.onended = () => resolve();
+      source.onended = () => {
+        enhancedTTSSource = null;
+        audioContext.close();
+        resolve();
+      };
     });
   } catch (error) {
     console.error('Enhanced TTS error:', error);
-    // Fallback to browser TTS
+    // Automatically fall back to browser TTS
     speakWithBrowserTTS(text, options);
   }
 }
@@ -157,10 +181,22 @@ export async function speakText(text: string, options: VoiceOptions): Promise<vo
   // Cancel any ongoing speech
   stopSpeaking();
   
-  if (options.useEnhancedVoices) {
-    return speakWithEnhancedTTS(text, options);
-  } else {
-    speakWithBrowserTTS(text, options);
+  try {
+    if (options.useEnhancedVoices) {
+      try {
+        // Try enhanced TTS first
+        await speakWithEnhancedTTS(text, options);
+      } catch (error) {
+        console.warn('Enhanced TTS failed, falling back to browser TTS:', error);
+        // Fall back to browser TTS if enhanced fails
+        speakWithBrowserTTS(text, options);
+      }
+    } else {
+      // Use browser TTS directly if enhanced isn't enabled
+      speakWithBrowserTTS(text, options);
+    }
+  } catch (error) {
+    console.error('Speech synthesis error:', error);
   }
 }
 

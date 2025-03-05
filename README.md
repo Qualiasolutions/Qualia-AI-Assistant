@@ -1,10 +1,10 @@
 # Qualia AI Assistant for Tzironis
 
-An AI-powered assistant application for Tzironis, a wholesale company in Greece. This application leverages the OpenAI Assistant API to provide advanced AI capabilities wrapped in a modern, user-friendly interface.
+An AI-powered assistant application for Tzironis, a wholesale company in Greece. This application leverages the Mistral AI API to provide advanced AI capabilities wrapped in a modern, user-friendly interface.
 
 ## Features
 
-- **OpenAI Assistant Integration**: Connects to an existing OpenAI Assistant with specialized business capabilities
+- **Mistral AI Integration**: Connects to the powerful Mistral AI models for enhanced performance and cost efficiency
 - **Voice Interaction**: Real-time voice input and output in both Greek and English
 - **Multilingual Support**: Seamless switching between Greek and English interfaces
 - **Business Capabilities**:
@@ -20,7 +20,7 @@ An AI-powered assistant application for Tzironis, a wholesale company in Greece.
 - **Frontend**: React, TypeScript, Next.js, Tailwind CSS
 - **UI Framework**: Custom styling with Tailwind CSS
 - **State Management**: React Hooks and Context
-- **API**: Next.js API routes for OpenAI communication
+- **API**: Next.js API routes for Mistral AI communication
 - **Authentication**: Simple username/password authentication
 - **Voice**: Web Speech API for speech recognition and synthesis
 
@@ -30,8 +30,7 @@ An AI-powered assistant application for Tzironis, a wholesale company in Greece.
 
 - Node.js 18.x or higher
 - npm or yarn
-- OpenAI API key
-- OpenAI Assistant ID
+- Mistral AI API key (sign up at https://console.mistral.ai/)
 
 ### Installation
 
@@ -48,9 +47,9 @@ An AI-powered assistant application for Tzironis, a wholesale company in Greece.
 
 3. Set up environment variables by creating a `.env.local` file:
    ```
-   # OpenAI API Configuration
-   OPENAI_API_KEY=your_openai_api_key_here
-   OPENAI_ASSISTANT_ID=your_assistant_id_here
+   # Mistral AI Configuration
+   MISTRAL_API_KEY=your_mistral_api_key_here
+   MISTRAL_MODEL=mistral-large-latest  # Or another model like mistral-small, mistral-medium
 
    # Authentication (in a production app, these would be stored securely)
    AUTH_USERNAME=user
@@ -72,6 +71,16 @@ An AI-powered assistant application for Tzironis, a wholesale company in Greece.
 npm run build
 npm start
 ```
+
+## Why Mistral AI?
+
+Mistral AI offers several advantages over other AI providers:
+
+- **Performance**: Mistral models deliver comparable quality to competitors at a fraction of the cost
+- **Data Privacy**: Enhanced data privacy controls and EU-based operations
+- **Cost Efficiency**: Significantly lower pricing model compared to OpenAI
+- **Open-Weights Models**: Options for fine-tuning and customization
+- **Low Latency**: Faster response times improve the chat experience
 
 ## Recommended Deployment
 

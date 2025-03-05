@@ -346,65 +346,31 @@ export default function useChat() {
 
   // Send a message with offline support
   const sendMessage = async (message: string) => {
-    if (!threadId) return;
-    
-    // Create a temporary message ID
-    const tempId = `temp-${Date.now()}`;
-    
-    // Add user message to UI immediately
-    const userMessage: Message = {
-      id: tempId,
-      role: 'user',
-      content: message,
-      timestamp: new Date(),
-    };
-    
-    setMessages(prevMessages => [userMessage, ...prevMessages]);
-    
-    // If offline, queue the message for later
-    if (!isOnline) {
-      apiClient.saveMessageToQueue({
-        id: tempId,
-        content: message,
-        timestamp: new Date(),
-        threadId,
-      });
-      
-      // Add a system message indicating offline status
-      const offlineMessage: Message = {
-        id: `offline-${Date.now()}`,
-        role: 'system',
-        content: 'You are currently offline. Your message will be sent when you reconnect.',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prevMessages => [offlineMessage, ...prevMessages]);
+    if (!threadId) {
+      console.error("No thread ID available");
+      setError("Chat not initialized. Please refresh the page.");
       return;
     }
     
-    // If online, proceed with normal sending
     setIsLoading(true);
     setError(null);
     
     try {
-      // Send message to API
-      await apiClient.sendMessage(threadId, message);
-      
-      // Start run
+      // Send message to API and start the run
       const runId = await apiClient.sendMessage(threadId, message);
       setCurrentRunId(runId);
       
       // Poll for completion
       await pollForCompletion(threadId, runId);
       
-      // Fetch updated messages
+      // Fetch updated messages after completion
       const updatedMessages = await fetchMessages(threadId);
       setMessages(updatedMessages);
     } catch (err) {
-      // If network error, queue the message
       if (err instanceof NetworkError) {
+        // Store in offline queue if it's a network error
         apiClient.saveMessageToQueue({
-          id: tempId,
+          id: `temp-${Date.now()}`,
           content: message,
           timestamp: new Date(),
           threadId,
@@ -412,7 +378,8 @@ export default function useChat() {
         
         setError('Network error. Your message will be sent when you reconnect.');
       } else {
-        setError('Failed to send message');
+        const errorMessage = err instanceof Error ? err.message : 'Failed to send message';
+        setError(errorMessage);
         console.error('Send message error:', err);
       }
     } finally {

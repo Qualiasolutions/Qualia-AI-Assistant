@@ -11,12 +11,14 @@ import { FiPlus, FiRefreshCw, FiZap } from 'react-icons/fi';
 import { Message } from '@/types';
 import useChat from '@/hooks/useChat';
 import useSettings from '@/hooks/useSettings';
+import useLeads from '@/hooks/useLeads';
 import DataSidebar from '@/components/ui/DataSidebar';
 
 export default function ChatPage() {
   const router = useRouter();
   const { messages, isLoading, sendMessage, resetThread, setMessages, forceReset } = useChat();
   const { settings, setLanguage, toggleVoice } = useSettings();
+  const { extractLeadsFromMessage, createLead } = useLeads();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showSidebar, setShowSidebar] = useState(true);
 
@@ -33,6 +35,47 @@ export default function ChatPage() {
       setMessages([welcomeMessage]);
     }
   }, [messages.length, isLoading, setMessages]);
+
+  // Process new assistant messages for lead extraction
+  useEffect(() => {
+    const processLeadsFromMessages = async () => {
+      // Get the most recent assistant message
+      const lastAssistantMessage = [...messages]
+        .filter(msg => msg.role === 'assistant')
+        .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())[0];
+      
+      if (lastAssistantMessage && lastAssistantMessage.id) {
+        // Check if this message contains leads
+        if (lastAssistantMessage.content.toLowerCase().includes('lead') && 
+            !lastAssistantMessage.content.includes('processed-for-leads')) {
+          
+          // Extract leads from message content
+          const leads = extractLeadsFromMessage(lastAssistantMessage.content);
+          
+          // Create leads if any were found
+          if (leads && leads.length > 0) {
+            for (const lead of leads) {
+              await createLead(lead);
+            }
+            
+            // Mark message as processed to avoid duplicate processing
+            const updatedMessage = { 
+              ...lastAssistantMessage, 
+              content: lastAssistantMessage.content + '\n\n<!-- processed-for-leads -->' 
+            };
+            
+            setMessages(messages.map(msg => 
+              msg.id === lastAssistantMessage.id ? updatedMessage : msg
+            ));
+          }
+        }
+      }
+    };
+
+    if (!isLoading && messages.length > 0) {
+      processLeadsFromMessages();
+    }
+  }, [messages, isLoading, extractLeadsFromMessage, createLead, setMessages]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -95,20 +138,33 @@ export default function ChatPage() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-b from-gray-50 via-sky-50/10 to-indigo-50/20 dark:from-gray-900 dark:via-gray-900 dark:to-indigo-950/20">
-      <Header
-        language={settings.language}
-        voiceEnabled={settings.voice.enabled}
-        onLanguageChange={setLanguage}
-        onVoiceToggle={toggleVoice}
-        onSettingsClick={toggleSidebar}
-        username={"Guest"}
-      />
+    <div className="flex flex-col h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 shadow-sm">
+        <Header
+          language={settings.language}
+          voiceEnabled={settings.voice.enabled}
+          onLanguageChange={setLanguage}
+          onVoiceToggle={toggleVoice}
+          onSettingsClick={toggleSidebar}
+          username={"Guest"}
+        />
+        
+        {/* New Chat Button moved to header area */}
+        <motion.button
+          onClick={handleNewChat}
+          className="px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-700 text-white rounded shadow hover:shadow-md transition-all duration-300 flex items-center gap-2"
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+        >
+          <FiPlus className="w-4 h-4" />
+          <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
+        </motion.button>
+      </div>
 
       <div className="flex flex-1 overflow-hidden">
         {/* Leads Sidebar */}
         {showSidebar && (
-          <div className="w-80 border-r border-gray-200/70 dark:border-gray-700/50 bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm overflow-y-auto hidden md:block">
+          <div className="w-80 border-r border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 overflow-y-auto hidden md:block">
             <DataSidebar />
           </div>
         )}
@@ -117,20 +173,9 @@ export default function ChatPage() {
         <div className="flex-1 flex flex-col w-full">
           <div className="flex-1 overflow-y-auto px-4 py-6 md:px-8">
             <div className="max-w-3xl mx-auto">
-              {/* New Chat Button - Centered at top */}
-              <div className="mb-8 flex justify-center">
-                <motion.button
-                  onClick={handleNewChat}
-                  className="px-5 py-2.5 bg-white/80 dark:bg-gray-800/80 text-gray-700 dark:text-gray-200 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 flex items-center space-x-1.5 backdrop-blur-sm border border-gray-200/50 dark:border-gray-700/50"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                >
-                  <FiZap className="mr-1 text-blue-500" />
-                  <span>{settings.language === 'el' ? 'Νέα συνομιλία' : 'New Chat'}</span>
-                </motion.button>
-              </div>
+              {/* Removed New Chat Button from here */}
               
-              {/* Messages - Perplexity-style floating chat */}
+              {/* Messages - Modern style with squared corners */}
               <div className="space-y-6">
                 <AnimatePresence mode="popLayout">
                   {messages.map((message) => (
@@ -164,14 +209,13 @@ export default function ChatPage() {
                     <span className="text-sm text-gray-400">AI is thinking...</span>
                   </motion.div>
                 )}
-
-                <div ref={messagesEndRef} className="h-4" />
               </div>
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
-          {/* Input area with chat input only */}
-          <div className="p-4 md:p-5 bg-white/90 dark:bg-gray-800/90 border-t border-gray-200/70 dark:border-gray-700/50 rounded-t-xl shadow-lg backdrop-blur-sm">
+          {/* Chat input area with squared corners */}
+          <div className="p-4 md:p-5 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-md">
             <div className="max-w-3xl mx-auto">
               <ChatInput 
                 onSendMessage={handleSendMessage}
