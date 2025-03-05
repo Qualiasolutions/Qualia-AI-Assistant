@@ -35,10 +35,16 @@ const getMistralClient = () => {
     throw new Error('Missing Mistral API key. Please add this to your environment variables in the Vercel dashboard.');
   }
 
-  return {
-    client: new MistralClient(apiKey),
-    modelName
-  };
+  try {
+    const client = new MistralClient(apiKey);
+    return {
+      client,
+      modelName
+    };
+  } catch (error) {
+    console.error('Failed to initialize Mistral client:', error);
+    throw new Error('Failed to initialize Mistral client. Please check your API key validity.');
+  }
 };
 
 // Handle missing environment variables gracefully for API routes
@@ -150,6 +156,7 @@ export async function runAssistant(threadId: string): Promise<string> {
     setTimeout(async () => {
       try {
         // Call Mistral API
+        console.log('Calling Mistral API with model:', modelName);
         const response = await client.chat({
           model: modelName,
           messages: [systemMessage, ...messages],

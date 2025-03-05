@@ -70,7 +70,9 @@ function cleanExpiredCache(): void {
 }
 
 // Clean cache periodically
-setInterval(cleanExpiredCache, 60 * 1000); // Clean every minute
+if (typeof setInterval !== 'undefined') {
+  setInterval(cleanExpiredCache, 60 * 1000); // Clean every minute
+}
 
 // First, let's enhance the mistral addMessageToThread function to support roles
 async function enhancedAddMessageToThread(threadId: string, content: string, role: 'user' | 'system' = 'user'): Promise<void> {
@@ -88,17 +90,33 @@ async function enhancedAddMessageToThread(threadId: string, content: string, rol
 export async function POST(request: NextRequest) {
   try {
     // Check for environment variables at runtime
-    if (!process.env.MISTRAL_API_KEY) {
+    const mistralApiKey = process.env.MISTRAL_API_KEY;
+    if (!mistralApiKey) {
+      console.error('Mistral API key is missing in environment variables');
       return NextResponse.json(
         { 
           error: 'Mistral AI configuration missing', 
-          details: 'Please set MISTRAL_API_KEY environment variable in the Vercel dashboard.' 
+          details: 'Please set MISTRAL_API_KEY environment variable in the Vercel dashboard.',
+          env: process.env.NODE_ENV || 'unknown',
+          apiKeyFirstChar: mistralApiKey ? mistralApiKey.charAt(0) : 'undefined'
         },
         { status: 503 }
       );
     }
     
-    const { action, threadId, message, runId, limit, before, language = 'en' } = await request.json();
+    const body = await request.json().catch(e => {
+      console.error('Failed to parse request body:', e);
+      return {};
+    });
+    
+    const { action, threadId, message, runId, limit, before, language = 'en' } = body;
+    
+    if (!action) {
+      return NextResponse.json(
+        { error: 'Action parameter is required' },
+        { status: 400 }
+      );
+    }
     
     // Select the appropriate system prompt based on language
     const systemPrompt = language === 'el' ? systemPrompts.el : systemPrompts.en;
@@ -272,14 +290,17 @@ export async function POST(request: NextRequest) {
       
       default:
         return NextResponse.json(
-          { error: 'Invalid action' },
+          { error: `Unknown action: ${action}` },
           { status: 400 }
         );
     }
   } catch (error) {
-    console.error('Assistant API error:', error);
+    console.error('Unhandled error in assistant API route:', error);
     return NextResponse.json(
-      { error: 'An error occurred while processing your request' },
+      { 
+        error: 'An unexpected error occurred',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     );
   }
